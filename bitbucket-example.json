@@ -1,0 +1,38 @@
+payload={
+    "canon_url": "https://bitbucket.org",
+    "commits": [
+        {
+            "author": "germanogmn1",
+            "branch": "master",
+            "files": [
+                {
+                    "file": "test",
+                    "type": "added"
+                }
+            ],
+            "message": "test\n",
+            "node": "e2c0b808aa08",
+            "parents": [
+                "0fe23f895957"
+            ],
+            "raw_author": "Germano Nicolini <germanogmn1@gmail.com>",
+            "raw_node": "e2c0b808aa08847859e9666274ba31f26e6e7cf2",
+            "revision": null,
+            "size": -1,
+            "timestamp": "2015-03-04 19:10:13",
+            "utctimestamp": "2015-03-04 18:10:13+00:00"
+        }
+    ],
+    "repository": {
+        "absolute_url": "/germanogmn1/trakr/",
+        "fork": false,
+        "is_private": true,
+        "name": "trakr",
+        "owner": "germanogmn1",
+        "scm": "git",
+        "slug": "trakr",
+        "website": ""
+    },
+    "truncated": false,
+    "user": "germanogmn1"
+}

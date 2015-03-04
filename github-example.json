@@ -1,0 +1,153 @@
+{
+    "after": "988b85ba427c35d256cb97114c59ef7929bde478",
+    "base_ref": null,
+    "before": "6d13a42d2ac52fe513b2a3df51af02454baef850",
+    "commits": [
+        {
+            "added": [],
+            "author": {
+                "email": "germanogmn1@gmail.com",
+                "name": "Germano Nicolini",
+                "username": "germanogmn1"
+            },
+            "committer": {
+                "email": "germanogmn1@gmail.com",
+                "name": "Germano Nicolini",
+                "username": "germanogmn1"
+            },
+            "distinct": true,
+            "id": "988b85ba427c35d256cb97114c59ef7929bde478",
+            "message": "Added aliases to gitconfig.",
+            "modified": [
+                "gitconfig"
+            ],
+            "removed": [],
+            "timestamp": "2015-03-04T15:18:02-03:00",
+            "url": "https://github.com/germanogmn1/dotfiles/commit/988b85ba427c35d256cb97114c59ef7929bde478"
+        }
+    ],
+    "compare": "https://github.com/germanogmn1/dotfiles/compare/6d13a42d2ac5...988b85ba427c",
+    "created": false,
+    "deleted": false,
+    "forced": false,
+    "head_commit": {
+        "added": [],
+        "author": {
+            "email": "germanogmn1@gmail.com",
+            "name": "Germano Nicolini",
+            "username": "germanogmn1"
+        },
+        "committer": {
+            "email": "germanogmn1@gmail.com",
+            "name": "Germano Nicolini",
+            "username": "germanogmn1"
+        },
+        "distinct": true,
+        "id": "988b85ba427c35d256cb97114c59ef7929bde478",
+        "message": "Added aliases to gitconfig.",
+        "modified": [
+            "gitconfig"
+        ],
+        "removed": [],
+        "timestamp": "2015-03-04T15:18:02-03:00",
+        "url": "https://github.com/germanogmn1/dotfiles/commit/988b85ba427c35d256cb97114c59ef7929bde478"
+    },
+    "pusher": {
+        "email": "germanogmn1@gmail.com",
+        "name": "germanogmn1"
+    },
+    "ref": "refs/heads/ubuntu",
+    "repository": {
+        "archive_url": "https://api.github.com/repos/germanogmn1/dotfiles/{archive_format}{/ref}",
+        "assignees_url": "https://api.github.com/repos/germanogmn1/dotfiles/assignees{/user}",
+        "blobs_url": "https://api.github.com/repos/germanogmn1/dotfiles/git/blobs{/sha}",
+        "branches_url": "https://api.github.com/repos/germanogmn1/dotfiles/branches{/branch}",
+        "clone_url": "https://github.com/germanogmn1/dotfiles.git",
+        "collaborators_url": "https://api.github.com/repos/germanogmn1/dotfiles/collaborators{/collaborator}",
+        "comments_url": "https://api.github.com/repos/germanogmn1/dotfiles/comments{/number}",
+        "commits_url": "https://api.github.com/repos/germanogmn1/dotfiles/commits{/sha}",
+        "compare_url": "https://api.github.com/repos/germanogmn1/dotfiles/compare/{base}...{head}",
+        "contents_url": "https://api.github.com/repos/germanogmn1/dotfiles/contents/{+path}",
+        "contributors_url": "https://api.github.com/repos/germanogmn1/dotfiles/contributors",
+        "created_at": 1316100195,
+        "default_branch": "master",
+        "description": "",
+        "downloads_url": "https://api.github.com/repos/germanogmn1/dotfiles/downloads",
+        "events_url": "https://api.github.com/repos/germanogmn1/dotfiles/events",
+        "fork": false,
+        "forks": 0,
+        "forks_count": 0,
+        "forks_url": "https://api.github.com/repos/germanogmn1/dotfiles/forks",
+        "full_name": "germanogmn1/dotfiles",
+        "git_commits_url": "https://api.github.com/repos/germanogmn1/dotfiles/git/commits{/sha}",
+        "git_refs_url": "https://api.github.com/repos/germanogmn1/dotfiles/git/refs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/germanogmn1/dotfiles/git/tags{/sha}",
+        "git_url": "git://github.com/germanogmn1/dotfiles.git",
+        "has_downloads": true,
+        "has_issues": true,
+        "has_pages": false,
+        "has_wiki": true,
+        "homepage": "",
+        "hooks_url": "https://api.github.com/repos/germanogmn1/dotfiles/hooks",
+        "html_url": "https://github.com/germanogmn1/dotfiles",
+        "id": 2393288,
+        "issue_comment_url": "https://api.github.com/repos/germanogmn1/dotfiles/issues/comments{/number}",
+        "issue_events_url": "https://api.github.com/repos/germanogmn1/dotfiles/issues/events{/number}",
+        "issues_url": "https://api.github.com/repos/germanogmn1/dotfiles/issues{/number}",
+        "keys_url": "https://api.github.com/repos/germanogmn1/dotfiles/keys{/key_id}",
+        "labels_url": "https://api.github.com/repos/germanogmn1/dotfiles/labels{/name}",
+        "language": "VimL",
+        "languages_url": "https://api.github.com/repos/germanogmn1/dotfiles/languages",
+        "master_branch": "master",
+        "merges_url": "https://api.github.com/repos/germanogmn1/dotfiles/merges",
+        "milestones_url": "https://api.github.com/repos/germanogmn1/dotfiles/milestones{/number}",
+        "mirror_url": null,
+        "name": "dotfiles",
+        "notifications_url": "https://api.github.com/repos/germanogmn1/dotfiles/notifications{?since,all,participating}",
+        "open_issues": 0,
+        "open_issues_count": 0,
+        "owner": {
+            "email": "germanogmn1@gmail.com",
+            "name": "germanogmn1"
+        },
+        "private": false,
+        "pulls_url": "https://api.github.com/repos/germanogmn1/dotfiles/pulls{/number}",
+        "pushed_at": 1425493093,
+        "releases_url": "https://api.github.com/repos/germanogmn1/dotfiles/releases{/id}",
+        "size": 156,
+        "ssh_url": "git@github.com:germanogmn1/dotfiles.git",
+        "stargazers": 0,
+        "stargazers_count": 0,
+        "stargazers_url": "https://api.github.com/repos/germanogmn1/dotfiles/stargazers",
+        "statuses_url": "https://api.github.com/repos/germanogmn1/dotfiles/statuses/{sha}",
+        "subscribers_url": "https://api.github.com/repos/germanogmn1/dotfiles/subscribers",
+        "subscription_url": "https://api.github.com/repos/germanogmn1/dotfiles/subscription",
+        "svn_url": "https://github.com/germanogmn1/dotfiles",
+        "tags_url": "https://api.github.com/repos/germanogmn1/dotfiles/tags",
+        "teams_url": "https://api.github.com/repos/germanogmn1/dotfiles/teams",
+        "trees_url": "https://api.github.com/repos/germanogmn1/dotfiles/git/trees{/sha}",
+        "updated_at": "2014-03-26T14:30:38Z",
+        "url": "https://github.com/germanogmn1/dotfiles",
+        "watchers": 0,
+        "watchers_count": 0
+    },
+    "sender": {
+        "avatar_url": "https://avatars.githubusercontent.com/u/518033?v=3",
+        "events_url": "https://api.github.com/users/germanogmn1/events{/privacy}",
+        "followers_url": "https://api.github.com/users/germanogmn1/followers",
+        "following_url": "https://api.github.com/users/germanogmn1/following{/other_user}",
+        "gists_url": "https://api.github.com/users/germanogmn1/gists{/gist_id}",
+        "gravatar_id": "",
+        "html_url": "https://github.com/germanogmn1",
+        "id": 518033,
+        "login": "germanogmn1",
+        "organizations_url": "https://api.github.com/users/germanogmn1/orgs",
+        "received_events_url": "https://api.github.com/users/germanogmn1/received_events",
+        "repos_url": "https://api.github.com/users/germanogmn1/repos",
+        "site_admin": false,
+        "starred_url": "https://api.github.com/users/germanogmn1/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/germanogmn1/subscriptions",
+        "type": "User",
+        "url": "https://api.github.com/users/germanogmn1"
+    }
+}
