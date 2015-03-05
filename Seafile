@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+echo "Starting Seafile"
+
+for i in {1..10}; do
+  echo "$i..."
+  sleep 1
+done
+
+echo "Oops, something to stderr" 1>&2
+sleep 1
+
+echo "Finished running"
