@@ -2,45 +2,49 @@ package main
 
 import (
     "fmt"
-    // "flag"
-    // "log"
-    "time"
+    "flag"
+    "log"
     "net/http"
-    // "os/exec"
-    // "io"
+    "os/exec"
+    "io"
     // "os"
     // "bytes"
     // "bufio"
 )
 
-type outBuffer struct {
+type OutputBuffer struct {
     Content []byte
     Stream chan []byte
     Done bool
 }
 
-func (o *outBuffer) Write(p []byte) (int, error) {
-    append(o.Content, p...)
+var cmdOut OutputBuffer
+
+func (o *OutputBuffer) Write(p []byte) (int, error) {
     o.Stream <- p
+    o.Content = append(o.Content, p...)
     return len(p), nil
 }
 
-func (o *outBuffer) ReadChunks() chan []byte {
+func (o *OutputBuffer) ReadChunks() chan []byte {
     response := make(chan []byte)
-    if len(o.Content) > 0 {
-        response <- o.Content
-    }
-    if !o.Done {
-        go func() {
+    go func() {
+        if len(o.Content) > 0 {
+            response <- o.Content
+        }
+        if o.Done {
+            close(response)
+        } else {
             for chunk := range o.Stream {
                 response <- chunk
             }
+            close(response)
         }
-    }
+    }()
     return response
 }
 
-func execFile(path string, output io.Writer) {
+func execFile(path string, output *OutputBuffer) {
     cmd := exec.Command(path)
     cmdout, err := cmd.StdoutPipe()
     if err != nil {
@@ -51,39 +55,38 @@ func execFile(path string, output io.Writer) {
         log.Fatal(err)
     }
     io.Copy(output, cmdout)
+    output.Done = true
     cmd.Wait()
 }
 
 func stream(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("X-Content-Type-Options", "nosniff")
-    for i := 0; i < 10; i++ {
-        time.Sleep(1 * time.Second)
-        fmt.Fprintf(w, fmt.Sprintf("exec %d\n", i))
+    for chunk := range cmdOut.ReadChunks() {
+        w.Write(chunk)
         w.(http.Flusher).Flush()
     }
 }
 
 func main() {
+    cmdOut = OutputBuffer {
+        Content: make([]byte, 0),
+        Stream: make(chan []byte),
+        Done: false,
+    }
+
     var port int
     flag.IntVar(&port, "port", 8080, "HTTP port to listen")
     flag.Parse()
 
+    http.HandleFunc("/exec", func(w http.ResponseWriter, r *http.Request) {
+        go execFile("./Seafile", &cmdOut)
+        fmt.Fprintf(w, "running")
+    })
     http.HandleFunc("/stream", stream)
     http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
 /*
-func main() {
-    
-
-    http.HandleFunc("/", handler)
-    http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-}
-func handler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
-}
-
-
 const (
     BUILD_WAITING = iota
     BUILD_RUNNING
