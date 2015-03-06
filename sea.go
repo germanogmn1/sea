@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os/exec"
@@ -16,7 +15,6 @@ import (
 type OutputBuffer struct {
 	Content []byte
 	Stream  chan []byte
-	Done    bool
 	Mutex   sync.RWMutex
 }
 
@@ -25,12 +23,14 @@ var executed bool
 
 // io.Writer implementation
 func (o *OutputBuffer) Write(p []byte) (int, error) {
+	dup := make([]byte, len(p), len(p))
+	copy(dup, p)
 	select {
-	case o.Stream <- p:
+	case o.Stream <- dup:
 	default:
 	}
 	o.Mutex.Lock()
-	o.Content = append(o.Content, p...)
+	o.Content = append(o.Content, dup...)
 	o.Mutex.Unlock()
 	return len(p), nil
 }
@@ -43,30 +43,21 @@ func (o *OutputBuffer) ReadChunks() chan []byte {
 			response <- o.Content
 		}
 		o.Mutex.RUnlock()
-		if o.Done {
-			close(response)
-		} else {
-			for chunk := range o.Stream {
-				response <- chunk
-			}
-			close(response)
+		for chunk := range o.Stream {
+			response <- chunk
 		}
+		close(response)
 	}()
 	return response
 }
 
 func execFile(path string, output *OutputBuffer) {
 	cmd := exec.Command(path)
-	cmdout, err := cmd.StdoutPipe()
+	cmd.Stdout = output
+	err := cmd.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = cmd.Start()
-	if err != nil {
-		log.Fatal(err)
-	}
-	io.Copy(output, cmdout)
-	output.Done = true
 	cmd.Wait()
 }
 
@@ -81,9 +72,7 @@ func stream(w http.ResponseWriter, r *http.Request) {
 func main() {
 	executed = false
 	cmdOut = OutputBuffer{
-		Content: make([]byte, 0),
 		Stream:  make(chan []byte),
-		Done:    false,
 	}
 
 	var port int
