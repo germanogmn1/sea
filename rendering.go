@@ -6,26 +6,38 @@ import (
 	"log"
 )
 
+const tmplExt = ".gohtml"
+
 var (
-	allTemplates *template.Template
-	templateMap  = make(map[string]*template.Template)
+	tmplMap     = make(map[string]*template.Template)
+	tmplFuncMap = map[string]interface{}{
+		"slice": func(str string, start, end int) string {
+			return str[start:end]
+		},
+		"stateName": func(buildState int) string {
+			return stateNames[buildState]
+		},
+	}
 )
 
 func InitTemplates() {
+	allTemplates := template.New("")
+	allTemplates = allTemplates.Funcs(tmplFuncMap)
 	var err error
-	allTemplates, err = template.ParseGlob("templates/*.gohtml")
+	allTemplates, err = allTemplates.ParseGlob("templates/*" + tmplExt)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	layout := allTemplates.Lookup("layout.gohtml")
+	layout := allTemplates.Lookup("layout" + tmplExt)
 	if layout == nil {
-		log.Fatal("layout.gohtml not found")
+		log.Fatal("layout" + tmplExt + " not found")
 	}
 	for _, tmpl := range allTemplates.Templates() {
-		if tmpl.Name() != "layout.gohtml" {
+		if tmpl.Name() != ("layout" + tmplExt) {
 			var err error
 			newTmpl := template.New(tmpl.Name())
+			newTmpl.Funcs(tmplFuncMap)
 			newTmpl, err = newTmpl.AddParseTree(tmpl.Name(), layout.Tree)
 			if err != nil {
 				log.Fatal(err)
@@ -34,17 +46,18 @@ func InitTemplates() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			templateMap[tmpl.Name()] = newTmpl
+			tmplMap[tmpl.Name()] = newTmpl
 		}
 	}
 }
 
 func RenderHtml(w io.Writer, tmpl string, data interface{}) {
-	renderTmpl := templateMap[tmpl+".gohtml"]
+	InitTemplates() // Debug mode
+	renderTmpl := tmplMap[tmpl+tmplExt]
 	if renderTmpl == nil {
-		log.Fatal("Template " + tmpl + ".gohtml not found")
+		log.Fatal("Template " + tmpl + tmplExt + " not found")
 	}
-	err := renderTmpl.ExecuteTemplate(w, tmpl+".gohtml", data)
+	err := renderTmpl.ExecuteTemplate(w, tmpl+tmplExt, data)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"strings"
+	"time"
 )
 
 const (
@@ -64,7 +66,7 @@ var buildList = []Build{
 
 func findBuild(rev string) *Build {
 	for i := range buildList {
-		if buildList[i].Rev == rev {
+		if strings.HasPrefix(buildList[i].Rev, rev) {
 			return &buildList[i]
 		}
 	}
@@ -82,11 +84,38 @@ func main() {
 	addr := fmt.Sprintf(":%d", port)
 
 	router := httprouter.New()
-	router.GET("/", IndexHandler)
-	router.GET("/build/:rev", ShowHandler)
-	router.POST("/exec", ExecHandler)
+	router.GET("/", RequestLogger(IndexHandler))
+	router.GET("/build/:rev", RequestLogger(ShowHandler))
+	router.GET("/build/:rev/stream", RequestLogger(StreamHandler))
+	router.POST("/exec", RequestLogger(ExecHandler))
+
 	log.Printf("Starting web server on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, router))
+}
+
+type loggingWrapper struct {
+	w      http.ResponseWriter
+	status int
+}
+
+func (l *loggingWrapper) Header() http.Header         { return l.w.Header() }
+func (l *loggingWrapper) Write(b []byte) (int, error) { return l.w.Write(b) }
+func (l *loggingWrapper) WriteHeader(status int) {
+	l.w.WriteHeader(status)
+	l.status = status
+}
+
+func RequestLogger(handler httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		start := time.Now()
+		logger := loggingWrapper{w, http.StatusOK}
+		log.Printf("Started %s %q", r.Method, r.RequestURI)
+		handler(&logger, r, ps)
+		duration := time.Since(start)
+		var milliseconds float64 = float64(duration.Nanoseconds()) / 10e5
+		log.Printf("Completed %d %s in %.2fms",
+			logger.status, http.StatusText(logger.status), milliseconds)
+	}
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -99,6 +128,16 @@ func IndexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 func ShowHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	build := findBuild(ps.ByName("rev"))
+	if build == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	RenderHtml(w, "show", build)
+}
+
+func StreamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	build := findBuild(ps.ByName("rev"))
 	if build == nil {
 		http.NotFound(w, r)

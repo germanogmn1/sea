@@ -1,6 +1,9 @@
 <h1>Index</h1>
 <ul>
 {{range .}}
-  <li>{{.Rev}}</li>
+  <li>
+    <a href="/build/{{slice .Rev 0 10}}" class="build-rev">{{slice .Rev 0 10}}</a>
+    [{{stateName .State}}]
+  </li>
 {{end}}
 </ul>
