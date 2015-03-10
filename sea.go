@@ -154,6 +154,7 @@ func ExecHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if build == nil {
 		http.NotFound(w, r)
 	} else if build.State == BUILD_WAITING {
+		// TODO: this check is unsafe!
 		go ExecBuild(build)
 	} else {
 		http.Error(w, "Invalid build state: "+stateNames[build.State], http.StatusBadRequest)
