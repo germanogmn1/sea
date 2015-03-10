@@ -36,6 +36,7 @@ func ExecBuild(build *Build) {
 	build.State = BUILD_RUNNING
 	cmd := exec.Command(build.ScriptPath)
 	cmd.Stdout = &build.Output
+	// TODO: stderr
 	err := cmd.Run()
 	if err == nil {
 		build.State = BUILD_SUCCESS
