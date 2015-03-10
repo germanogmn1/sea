@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
@@ -81,11 +80,9 @@ func main() {
 	InitTemplates()
 
 	// Run HTTP server
-	var port int
-	flag.IntVar(&port, "port", 8080, "HTTP port to listen")
+	var addr string
+	flag.StringVar(&addr, "addr", ":8080", "TCP address to listen on")
 	flag.Parse()
-
-	addr := fmt.Sprintf(":%d", port)
 
 	router := httprouter.New()
 	router.GET("/", RequestLogger(IndexHandler))
