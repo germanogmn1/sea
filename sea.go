@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
-	"io"
 	"log"
 	"net/http"
 	"os/exec"
@@ -33,7 +32,7 @@ type Build struct {
 	Output     OutputBuffer
 }
 
-func execFile(path string, output io.Writer) {
+func execFile(path string, output *OutputBuffer) {
 	cmd := exec.Command(path)
 	cmd.Stdout = output
 	err := cmd.Start()
@@ -41,6 +40,7 @@ func execFile(path string, output io.Writer) {
 		log.Fatal(err)
 	}
 	cmd.Wait()
+	output.Close()
 }
 
 var buildList = []Build{
@@ -87,7 +87,7 @@ func main() {
 	router.GET("/", RequestLogger(IndexHandler))
 	router.GET("/build/:rev", RequestLogger(ShowHandler))
 	router.GET("/build/:rev/stream", RequestLogger(StreamHandler))
-	router.POST("/exec", RequestLogger(ExecHandler))
+	router.POST("/build/:rev/exec", RequestLogger(ExecHandler))
 
 	log.Printf("Starting web server on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, router))
@@ -104,6 +104,7 @@ func (l *loggingWrapper) WriteHeader(status int) {
 	l.w.WriteHeader(status)
 	l.status = status
 }
+func (l *loggingWrapper) Flush() { l.w.(http.Flusher).Flush() }
 
 func RequestLogger(handler httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -121,10 +122,6 @@ func RequestLogger(handler httprouter.Handle) httprouter.Handle {
 func IndexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	RenderHtml(w, "index", buildList)
-	// for i := range  {
-	// 	build := &buildList[i]
-	// 	fmt.Fprintf(w, "%s: %s (%s)\n", build.Rev[:11], stateNames[build.State], build.ScriptPath)
-	// }
 }
 
 func ShowHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -151,7 +148,13 @@ func StreamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	}
 }
 
-func ExecHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	// go execFile("./Seafile", &cmdOut)
-	// fmt.Fprintf(w, "started")
+func ExecHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	build := findBuild(ps.ByName("rev"))
+	if build == nil {
+		http.NotFound(w, r)
+	} else if build.State == BUILD_WAITING {
+		go execFile("./Seafile", &build.Output)
+	} else {
+		http.Error(w, "Invalid build state: "+stateNames[build.State], http.StatusBadRequest)
+	}
 }

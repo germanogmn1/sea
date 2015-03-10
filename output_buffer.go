@@ -35,6 +35,8 @@ func (o *OutputBuffer) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+func (o *OutputBuffer) Close() { close(o.stream) }
+
 func (o *OutputBuffer) ReadChunks() chan []byte {
 	response := make(chan []byte)
 	go func() {

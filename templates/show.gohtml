@@ -1,1 +1,31 @@
 <h1>{{slice .Rev 0 10}} [{{stateName .State}}]</h1>
+
+<button id="exec-build" type="submit">exec</button>
+
+<pre id="build-result"></pre>
+
+<script>
+  (function () {
+    var getId = document.getElementById.bind(document);
+
+    var streamBuild = function () {
+      var target = getId('build-result');
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/build/{{.Rev}}/stream', true);
+      xhr.onprogress = function (e) {
+        target.innerHTML = this.responseText;
+        console.log('.');
+      };
+      xhr.send();
+    };
+
+    streamBuild();
+
+    getId('exec-build').addEventListener('click', function () {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/build/{{.Rev}}/exec', true);
+      xhr.send();
+    });
+
+  }());
+</script>
