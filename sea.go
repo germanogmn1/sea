@@ -32,15 +32,18 @@ type Build struct {
 	Output     OutputBuffer
 }
 
-func execFile(path string, output *OutputBuffer) {
-	cmd := exec.Command(path)
-	cmd.Stdout = output
-	err := cmd.Start()
-	if err != nil {
-		log.Fatal(err)
+func ExecBuild(build *Build) {
+	build.State = BUILD_RUNNING
+	cmd := exec.Command(build.ScriptPath)
+	cmd.Stdout = &build.Output
+	err := cmd.Run()
+	if err == nil {
+		build.State = BUILD_SUCCESS
+	} else {
+		build.State = BUILD_FAILURE
+		// TODO: how to handle this?
 	}
-	cmd.Wait()
-	output.Close()
+	build.Output.Close()
 }
 
 var buildList = []Build{
@@ -153,7 +156,7 @@ func ExecHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if build == nil {
 		http.NotFound(w, r)
 	} else if build.State == BUILD_WAITING {
-		go execFile("./Seafile", &build.Output)
+		go ExecBuild(build)
 	} else {
 		http.Error(w, "Invalid build state: "+stateNames[build.State], http.StatusBadRequest)
 	}
