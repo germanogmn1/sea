@@ -3,7 +3,6 @@ package main
 import (
 	"html/template"
 	"io"
-	"log"
 )
 
 const tmplExt = ".gohtml"
@@ -23,12 +22,12 @@ func InitTemplates() {
 	var err error
 	allTemplates, err = allTemplates.ParseGlob("templates/*" + tmplExt)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	layout := allTemplates.Lookup("layout" + tmplExt)
 	if layout == nil {
-		log.Fatal("layout" + tmplExt + " not found")
+		panic("layout" + tmplExt + " not found")
 	}
 	for _, tmpl := range allTemplates.Templates() {
 		if tmpl.Name() != ("layout" + tmplExt) {
@@ -37,11 +36,11 @@ func InitTemplates() {
 			newTmpl.Funcs(tmplFuncMap)
 			newTmpl, err = newTmpl.AddParseTree(tmpl.Name(), layout.Tree)
 			if err != nil {
-				log.Fatal(err)
+				panic(err)
 			}
 			newTmpl, err = newTmpl.AddParseTree("body", tmpl.Tree)
 			if err != nil {
-				log.Fatal(err)
+				panic(err)
 			}
 			tmplMap[tmpl.Name()] = newTmpl
 		}
@@ -52,10 +51,10 @@ func RenderHtml(w io.Writer, tmpl string, data interface{}) {
 	InitTemplates() // Debug mode
 	renderTmpl := tmplMap[tmpl+tmplExt]
 	if renderTmpl == nil {
-		log.Fatal("Template " + tmpl + tmplExt + " not found")
+		panic("Template " + tmpl + tmplExt + " not found")
 	}
-	err := renderTmpl.ExecuteTemplate(w, tmpl+tmplExt, data)
+	err := renderTmpl.Execute(w, data)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }

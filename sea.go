@@ -2,11 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
-	"time"
 )
 
 var buildList = []Build{
@@ -48,39 +49,21 @@ func main() {
 	flag.Parse()
 
 	router := httprouter.New()
-	router.GET("/", RequestLogger(IndexHandler))
-	router.GET("/build/:rev", RequestLogger(ShowHandler))
-	router.GET("/build/:rev/stream", RequestLogger(StreamHandler))
-	router.POST("/build/:rev/exec", RequestLogger(ExecHandler))
+	router.PanicHandler = MyPanicHandler
+	router.GET("/", IndexHandler)
+	router.GET("/build/:rev", ShowHandler)
+	router.GET("/build/:rev/stream", StreamHandler)
+	router.POST("/build/:rev/exec", ExecHandler)
 
 	log.Printf("Starting web server on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, router))
+	log.Fatal(http.ListenAndServe(addr, &HTTPWrapper{router}))
 }
 
-type loggingWrapper struct {
-	w      http.ResponseWriter
-	status int
-}
-
-func (l *loggingWrapper) Header() http.Header         { return l.w.Header() }
-func (l *loggingWrapper) Write(b []byte) (int, error) { return l.w.Write(b) }
-func (l *loggingWrapper) WriteHeader(status int) {
-	l.w.WriteHeader(status)
-	l.status = status
-}
-func (l *loggingWrapper) Flush() { l.w.(http.Flusher).Flush() }
-
-func RequestLogger(handler httprouter.Handle) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		start := time.Now()
-		logger := loggingWrapper{w, http.StatusOK}
-		log.Printf("Started %s %q", r.Method, r.RequestURI)
-		handler(&logger, r, ps)
-		duration := time.Since(start)
-		var milliseconds float64 = float64(duration.Nanoseconds()) / 10e5
-		log.Printf("Completed %d %s in %.2fms",
-			logger.status, http.StatusText(logger.status), milliseconds)
-	}
+func MyPanicHandler(w http.ResponseWriter, r *http.Request, err interface{}) {
+	fmt.Println(reflect.TypeOf(w).String())
+	message := fmt.Sprintf("%v", err)
+	log.Printf("panic: " + fmt.Sprintf("%v", err))
+	http.Error(w, message, http.StatusInternalServerError)
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

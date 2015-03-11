@@ -1,6 +1,8 @@
 <h1>{{slice .Rev 0 10}} [{{.StateName}}]</h1>
 
+{{if .State eq 0}}
 <button id="exec-build" type="submit">exec</button>
+{{end}}
 
 <pre id="build-result"></pre>
 
@@ -26,6 +28,5 @@
       xhr.open('POST', '/build/{{.Rev}}/exec', true);
       xhr.send();
     });
-
   }());
 </script>

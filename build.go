@@ -2,6 +2,7 @@ package main
 
 import (
 	"os/exec"
+	"syscall"
 )
 
 const (
@@ -23,6 +24,8 @@ type Build struct {
 	State      int
 	ScriptPath string
 	Output     OutputBuffer
+	ReturnCode int
+	// Previous *Build ??? in case o retry
 }
 
 func (b *Build) StateName() string {
@@ -38,8 +41,11 @@ func (b *Build) Exec() {
 	if err == nil {
 		b.State = BUILD_SUCCESS
 	} else {
+		// TODO: handle error if it's not a exec.ExitError
+		ps := err.(*exec.ExitError).ProcessState
+		ws := ps.Sys().(syscall.WaitStatus) // will panic if not Unix
 		b.State = BUILD_FAILURE
-		// TODO: do something with return code
+		b.ReturnCode = ws.ExitStatus()
 	}
 	b.Output.Close()
 }

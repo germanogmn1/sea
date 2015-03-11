@@ -7,7 +7,8 @@ for i in {1..10}; do
   sleep 1
 done
 
-echo "Oops, something to stderr" 1>&2
+echo "Oops, catastrophic failure" 1>&2
+exit 1467
 sleep 1
 
 echo "Finished running"
