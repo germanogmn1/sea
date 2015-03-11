@@ -14,9 +14,6 @@ var (
 		"slice": func(str string, start, end int) string {
 			return str[start:end]
 		},
-		"stateName": func(buildState int) string {
-			return stateNames[buildState]
-		},
 	}
 )
 

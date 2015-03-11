@@ -5,46 +5,9 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
-	"os/exec"
 	"strings"
 	"time"
 )
-
-const (
-	BUILD_WAITING = iota
-	BUILD_RUNNING
-	BUILD_SUCCESS
-	BUILD_FAILURE
-)
-
-var stateNames = []string{
-	"Wating",
-	"Running",
-	"Success",
-	"Failure",
-}
-
-type Build struct {
-	Rev        string
-	State      int
-	ScriptPath string
-	Output     OutputBuffer
-}
-
-func ExecBuild(build *Build) {
-	build.State = BUILD_RUNNING
-	cmd := exec.Command(build.ScriptPath)
-	cmd.Stdout = &build.Output
-	// TODO: stderr
-	err := cmd.Run()
-	if err == nil {
-		build.State = BUILD_SUCCESS
-	} else {
-		build.State = BUILD_FAILURE
-		// TODO: how to handle this?
-	}
-	build.Output.Close()
-}
 
 var buildList = []Build{
 	Build{
@@ -155,8 +118,8 @@ func ExecHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		http.NotFound(w, r)
 	} else if build.State == BUILD_WAITING {
 		// TODO: this check is unsafe!
-		go ExecBuild(build)
+		go build.Exec()
 	} else {
-		http.Error(w, "Invalid build state: "+stateNames[build.State], http.StatusBadRequest)
+		http.Error(w, "Invalid build state: "+build.StateName(), http.StatusBadRequest)
 	}
 }
