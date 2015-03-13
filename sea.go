@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	// "fmt"
 	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
-	"reflect"
+	// "reflect"
 	"strings"
 )
 
@@ -49,7 +49,6 @@ func main() {
 	flag.Parse()
 
 	router := httprouter.New()
-	router.PanicHandler = MyPanicHandler
 	router.GET("/", IndexHandler)
 	router.GET("/build/:rev", ShowHandler)
 	router.GET("/build/:rev/stream", StreamHandler)
@@ -59,14 +58,8 @@ func main() {
 	log.Fatal(http.ListenAndServe(addr, &HTTPWrapper{router}))
 }
 
-func MyPanicHandler(w http.ResponseWriter, r *http.Request, err interface{}) {
-	fmt.Println(reflect.TypeOf(w).String())
-	message := fmt.Sprintf("%v", err)
-	log.Printf("panic: " + fmt.Sprintf("%v", err))
-	http.Error(w, message, http.StatusInternalServerError)
-}
-
 func IndexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// panic(reflect.TypeOf(w).String())
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	RenderHtml(w, "index", buildList)
 }

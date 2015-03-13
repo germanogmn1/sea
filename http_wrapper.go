@@ -1,58 +1,78 @@
-package foo
+package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"time"
 )
+
+type bufferedWriter struct {
+	rw      http.ResponseWriter
+	buffer  bytes.Buffer
+	status  int
+	flushed bool
+}
+
+func newBufferedWriter(w http.ResponseWriter) *bufferedWriter {
+	return &bufferedWriter{
+		rw:     w,
+		status: http.StatusOK,
+	}
+}
+
+// http.ResponseWriter
+func (bw *bufferedWriter) Header() http.Header         { return bw.rw.Header() }
+func (bw *bufferedWriter) Write(b []byte) (int, error) { return bw.buffer.Write(b) }
+func (bw *bufferedWriter) WriteHeader(status int)      { bw.status = status }
+
+// http.Flusher
+func (bw *bufferedWriter) Flush() {
+	bw.commit()
+	bw.rw.(http.Flusher).Flush()
+	bw.flushed = true
+}
+
+func (bw *bufferedWriter) commit() {
+	bw.rw.WriteHeader(bw.status)
+	bw.rw.Write(bw.buffer.Bytes())
+	bw.buffer.Reset()
+}
 
 type HTTPWrapper struct {
 	Handler http.Handler
 }
 
-type writerWrapper struct {
-	w       http.ResponseWriter
-	status  int
-	flushed bool
-}
-
-func (l *writerWrapper) Header() http.Header { fmt.Println("Header"); return l.w.Header() }
-func (l *writerWrapper) Write(b []byte) (int, error) {
-	fmt.Printf("Write %q\n", b)
-	return l.w.Write(b)
-}
-func (l *writerWrapper) WriteHeader(status int) {
-	l.w.WriteHeader(status)
-	l.status = status
-}
-func (l *writerWrapper) Flush() {
-	l.w.(http.Flusher).Flush()
-	l.flushed = true
-}
-
 func (h *HTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ww := writerWrapper{w, http.StatusOK}
+	bw := newBufferedWriter(w)
 	start := time.Now()
 	log.Printf("Started %s %q", r.Method, r.RequestURI)
 
-	h.handlePanic(&ww, r)
+	h.handlePanic(bw, r)
 
 	duration := time.Since(start)
 	var milliseconds float64 = float64(duration.Nanoseconds()) / 10e6
-	log.Printf("Completed %d %s in %.2fms", ww.status,
-		http.StatusText(ww.status), milliseconds)
+	log.Printf("Completed %d %s in %.2fms", bw.status,
+		http.StatusText(bw.status), milliseconds)
 }
 
-func (h *HTTPWrapper) handlePanic(ww *writerWrapper, r *http.Request) {
+func (h *HTTPWrapper) handlePanic(bw *bufferedWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
-			if ww.flushed {
+			if bw.flushed {
 				// TODO: response already sent to client, now what?
 			} else {
-				// TODO: get stack trace, render error page
+				bw.buffer.Reset()
+				bw.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprintf(bw, "%v\n\n", err)
+				var buf []byte
+				runtime.Stack(buf, false)
+				bw.Write(buf)
 			}
 		}
+		bw.commit()
 	}()
-	h.Handler(ww, r)
+	h.Handler.ServeHTTP(bw, r)
 }

@@ -1,8 +1,7 @@
 <h1>{{slice .Rev 0 10}} [{{.StateName}}]</h1>
 
-{{if .State eq 0}}
+{{ .State or .StateName }}
 <button id="exec-build" type="submit">exec</button>
-{{end}}
 
 <pre id="build-result"></pre>
 
