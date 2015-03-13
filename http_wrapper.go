@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -64,15 +66,43 @@ func (h *HTTPWrapper) handlePanic(bw *bufferedWriter, r *http.Request) {
 			if bw.flushed {
 				// TODO: response already sent to client, now what?
 			} else {
-				bw.buffer.Reset()
+				log.Printf("panic: %v", err)
+				bw.buffer.Reset() // discard previous rendered data
 				bw.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(bw, "%v\n\n", err)
-				var buf []byte
-				runtime.Stack(buf, false)
-				bw.Write(buf)
+				renderErrorPage(bw, err)
 			}
 		}
 		bw.commit()
 	}()
 	h.Handler.ServeHTTP(bw, r)
+}
+
+const errorPageTmpl = `<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			body { margin: 0; }
+			h3, pre { padding: 15px 25px; }
+			h3 {
+				margin: 0;
+				font-family: Helvetica, sans-serif;
+				background-color: #c22;
+				color: #eee;
+			}
+		</style>
+		<title>PANIC</title>
+	</head>
+	<body>
+		<h3>%v</h3>
+		<pre>%s</pre>
+	</body>
+</html>`
+
+func renderErrorPage(w http.ResponseWriter, err interface{}) {
+	stack := make([]byte, 4096)
+	stack = stack[:runtime.Stack(stack, false)]
+	prettyStack := strings.Replace(string(stack), os.Getenv("GOPATH"), "$GOPATH", -1)
+
+	html := fmt.Sprintf(errorPageTmpl, err, prettyStack)
+	w.Write([]byte(html))
 }
