@@ -2,11 +2,12 @@ package main
 
 import (
 	"flag"
-	// "fmt"
+	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
 	// "reflect"
+	git "gopkg.in/libgit2/git2go.v22"
 	"strings"
 )
 
@@ -38,6 +39,24 @@ func findBuild(rev string) *Build {
 		}
 	}
 	return nil
+}
+
+func prepareBuild() {
+	repo, err := git.OpenRepository( /* path */ )
+	oid, err := git.NewOid( /* rev */ )
+	tree, err := repo.LookupTree(oid)
+	repo.CheckoutTree(tree, &git.CheckoutOpts{
+		// Strategy: git.CheckoutForce, ???
+		TargetDirectory: "/tmp/proj/rev",
+	})
+	// TODO: delete dir somewere
+
+	append(buildList, Build{
+		Rev:        rev,
+		State:      BUILD_WAITING,
+		ScriptPath: "/tmp/proj/rev/Seafile",
+		Output:     NewEmptyOutputBuffer(),
+	})
 }
 
 func main() {
