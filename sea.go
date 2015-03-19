@@ -2,13 +2,14 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/julienschmidt/httprouter"
+	git "gopkg.in/libgit2/git2go.v22"
+	"io"
 	"log"
 	"net/http"
-	// "reflect"
-	git "gopkg.in/libgit2/git2go.v22"
+	"os"
 	"strings"
+	"syscall"
 )
 
 var buildList = []Build{
@@ -41,9 +42,9 @@ func findBuild(rev string) *Build {
 	return nil
 }
 
-func prepareBuild() {
-	repo, err := git.OpenRepository( /* path */ )
-	oid, err := git.NewOid( /* rev */ )
+func prepareBuild(path, rev string) {
+	repo, err := git.OpenRepository(path)
+	oid, err := git.NewOid(rev)
 	tree, err := repo.LookupTree(oid)
 	repo.CheckoutTree(tree, &git.CheckoutOpts{
 		// Strategy: git.CheckoutForce, ???
@@ -59,7 +60,52 @@ func prepareBuild() {
 	})
 }
 
+func listenGitHooks(pipePath string) {
+	err := syscall.Mknod(pipePath, syscall.S_IFIFO|0666, 0)
+	// TODO: review the pipe cleanup, it's not being removed for some reason
+	defer func() {
+		err := os.Remove(pipePath)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	if err != nil {
+		panic(err)
+	}
+	// TODO: comment why this have to be read&write mode
+	file, err := os.OpenFile(pipePath, os.O_RDWR, 0666)
+	defer file.Close()
+	if err != nil {
+		panic(err)
+	}
+	readBuff := make([]byte, 0xFF)
+	for {
+		n, err := file.Read(readBuff)
+		if err != nil {
+			if err == io.EOF {
+				log.Printf("EOF: %v", err)
+			} else {
+				panic(err)
+			}
+		}
+		if n > 0 {
+			log.Printf("Read: %q", readBuff[:n])
+		}
+	}
+}
+
 func main() {
+	var pipePath string
+	flag.StringVar(&pipePath, "pipe", "./post_receive.pipe",
+		"Path to the named pipe where the local build requests will come.")
+
+	done := make(chan struct{})
+	go func() {
+		listenGitHooks(pipePath)
+		done <- struct{}{}
+	}()
+	<-done
+	return
 	InitTemplates()
 
 	// Run HTTP server
