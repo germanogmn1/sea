@@ -68,7 +68,8 @@ func prepareBuild(path, rev string) {
 	})
 }
 
-func listenGitHooks(pipePath string) {
+// TODO: refactor cleanup and error handling here
+func GitHooksListener(pipePath string) {
 	assert := func(err error) {
 		if err != nil {
 			panic(err)
@@ -92,7 +93,8 @@ func listenGitHooks(pipePath string) {
 	// TODO: comment why this have to be read&write mode
 	file, err = os.OpenFile(pipePath, os.O_RDWR, 0)
 	assert(err)
-	readBuff := make([]byte, 0xFF)
+	log.Printf("Listening for git hooks on %s", pipePath)
+	readBuff := make([]byte, 0xFF) // TODO: check if this size is enough
 	for {
 		n, err := file.Read(readBuff)
 		assert(err)
@@ -100,34 +102,27 @@ func listenGitHooks(pipePath string) {
 	}
 }
 
-// TODO: handle SIGINT nicely
-func main() {
-	var pipePath string
-	flag.StringVar(&pipePath, "pipe", "/tmp/seapipe",
-		"Path to the named pipe where the local build requests will come.")
-
-	done := make(chan struct{})
-	go func() {
-		listenGitHooks(pipePath)
-		done <- struct{}{}
-	}()
-	<-done
-	return
+func WebServer(addr string) {
 	InitTemplates()
-
-	// Run HTTP server
-	var addr string
-	flag.StringVar(&addr, "addr", ":8080", "TCP address to listen on")
-	flag.Parse()
-
 	router := httprouter.New()
 	router.GET("/", IndexHandler)
 	router.GET("/build/:rev", ShowHandler)
 	router.GET("/build/:rev/stream", StreamHandler)
 	router.POST("/build/:rev/exec", ExecHandler)
-
 	log.Printf("Starting web server on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, &HTTPWrapper{router}))
+}
+
+func main() {
+	var pipePath, webAddr string
+	flag.StringVar(&webAddr, "addr", ":8080", "TCP address to listen on")
+	flag.StringVar(&pipePath, "pipe", "/tmp/seapipe", "named pipe to listen for git hooks.")
+
+	// TODO: handle SIGINT nicely
+	done := make(chan struct{})
+	go WebServer(webAddr)
+	go GitHooksListener(pipePath)
+	<-done
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -141,7 +136,6 @@ func ShowHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		http.NotFound(w, r)
 		return
 	}
-
 	RenderHtml(w, "show", build)
 }
 
@@ -151,7 +145,6 @@ func StreamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		http.NotFound(w, r)
 		return
 	}
-
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	for chunk := range build.Output.ReadChunks() {
 		w.Write(chunk)
