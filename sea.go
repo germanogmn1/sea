@@ -4,7 +4,6 @@ import (
 	"flag"
 	"github.com/julienschmidt/httprouter"
 	git "gopkg.in/libgit2/git2go.v22"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -44,15 +43,24 @@ func findBuild(rev string) *Build {
 
 func prepareBuild(path, rev string) {
 	repo, err := git.OpenRepository(path)
+	if err != nil {
+		panic(err)
+	}
 	oid, err := git.NewOid(rev)
+	if err != nil {
+		panic(err)
+	}
 	tree, err := repo.LookupTree(oid)
+	if err != nil {
+		panic(err)
+	}
 	repo.CheckoutTree(tree, &git.CheckoutOpts{
 		// Strategy: git.CheckoutForce, ???
 		TargetDirectory: "/tmp/proj/rev",
 	})
 	// TODO: delete dir somewere
 
-	append(buildList, Build{
+	buildList = append(buildList, Build{
 		Rev:        rev,
 		State:      BUILD_WAITING,
 		ScriptPath: "/tmp/proj/rev/Seafile",
@@ -61,42 +69,41 @@ func prepareBuild(path, rev string) {
 }
 
 func listenGitHooks(pipePath string) {
-	err := syscall.Mknod(pipePath, syscall.S_IFIFO|0666, 0)
-	// TODO: review the pipe cleanup, it's not being removed for some reason
-	defer func() {
-		err := os.Remove(pipePath)
+	assert := func(err error) {
 		if err != nil {
 			panic(err)
 		}
+	}
+	var file *os.File = nil
+
+	oldmask := syscall.Umask(0)
+	err := syscall.Mkfifo(pipePath, 0622)
+	syscall.Umask(oldmask)
+
+	defer func() {
+		var closeErr error
+		if file != nil {
+			closeErr = file.Close()
+		}
+		assert(closeErr)
+		assert(os.Remove(pipePath))
 	}()
-	if err != nil {
-		panic(err)
-	}
+	assert(err)
 	// TODO: comment why this have to be read&write mode
-	file, err := os.OpenFile(pipePath, os.O_RDWR, 0666)
-	defer file.Close()
-	if err != nil {
-		panic(err)
-	}
+	file, err = os.OpenFile(pipePath, os.O_RDWR, 0)
+	assert(err)
 	readBuff := make([]byte, 0xFF)
 	for {
 		n, err := file.Read(readBuff)
-		if err != nil {
-			if err == io.EOF {
-				log.Printf("EOF: %v", err)
-			} else {
-				panic(err)
-			}
-		}
-		if n > 0 {
-			log.Printf("Read: %q", readBuff[:n])
-		}
+		assert(err)
+		log.Printf("hook: %q", ShellSplit(string(readBuff[:n])))
 	}
 }
 
+// TODO: handle SIGINT nicely
 func main() {
 	var pipePath string
-	flag.StringVar(&pipePath, "pipe", "./post_receive.pipe",
+	flag.StringVar(&pipePath, "pipe", "/tmp/seapipe",
 		"Path to the named pipe where the local build requests will come.")
 
 	done := make(chan struct{})
@@ -124,7 +131,6 @@ func main() {
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	// panic(reflect.TypeOf(w).String())
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	RenderHtml(w, "index", buildList)
 }

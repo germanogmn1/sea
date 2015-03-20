@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+seapipe="$(git config hooks.seapipe)"
+if [[ $? != 0 ]]; then
+	echo "git config hooks.seapipe missing" 1>&2
+	exit 1
+fi
+if [[ !(-p "$seapipe") ]]; then
+	echo "hooks.seapipe is not a pipe: $seapipe" 1>&2
+	exit 2
+fi
+
+cd "$(git rev-parse --git-dir)"
+repopath="$(pwd -P)"
+
+while read oldrev newrev refname ; do
+	printf "%q %q %q %q" "$repopath" "$oldrev" "$newrev" "$refname" > "$seapipe"
+done
