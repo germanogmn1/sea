@@ -7,3 +7,15 @@
   </li>
 {{end}}
 </ul>
+
+<script>
+  (function () {
+    var es = new EventSource("/updates");
+    es.addEventListener("inc", function(e) {
+      console.log(e.data);
+    });
+    window.setTimeout(function () {
+      es.close();
+    }, 5000);
+  })();
+</script>

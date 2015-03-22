@@ -32,13 +32,21 @@ func (bw *bufferedWriter) WriteHeader(status int)      { bw.status = status }
 
 // http.Flusher
 func (bw *bufferedWriter) Flush() {
-	bw.commit()
+	bw.rw.Write(bw.buffer.Bytes())
+	bw.buffer.Reset()
 	bw.rw.(http.Flusher).Flush()
 	bw.flushed = true
 }
 
+// http.CloseNotifier
+func (bw *bufferedWriter) CloseNotify() <-chan bool {
+	return bw.rw.(http.CloseNotifier).CloseNotify()
+}
+
 func (bw *bufferedWriter) commit() {
-	bw.rw.WriteHeader(bw.status)
+	if !bw.flushed {
+		bw.rw.WriteHeader(bw.status)
+	}
 	bw.rw.Write(bw.buffer.Bytes())
 	bw.buffer.Reset()
 }
