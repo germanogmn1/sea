@@ -55,9 +55,8 @@ func (h *HTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.handlePanic(bw, r)
 
 	duration := time.Since(start)
-	var milliseconds float64 = float64(duration.Nanoseconds()) / 10e6
-	log.Printf("Completed %d %s in %.2fms", bw.status,
-		http.StatusText(bw.status), milliseconds)
+	log.Printf("Completed %d %s in %v", bw.status,
+		http.StatusText(bw.status), duration)
 }
 
 func (h *HTTPWrapper) handlePanic(bw *bufferedWriter, r *http.Request) {
