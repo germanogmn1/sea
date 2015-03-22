@@ -2,6 +2,7 @@ package main
 
 import (
 	"os/exec"
+	"path/filepath"
 	"syscall"
 )
 
@@ -22,10 +23,9 @@ var stateNames = []string{
 type Build struct {
 	Rev        string
 	State      int
-	ScriptPath string
+	Path       string
 	Output     OutputBuffer
 	ReturnCode int
-	// Previous *Build ??? in case o retry
 }
 
 func (b *Build) StateName() string {
@@ -34,7 +34,8 @@ func (b *Build) StateName() string {
 
 func (b *Build) Exec() {
 	b.State = BUILD_RUNNING
-	cmd := exec.Command(b.ScriptPath)
+	script := filepath.Join(b.Path, "Seafile")
+	cmd := exec.Command(script)
 	cmd.Stdout = &b.Output
 	// TODO: stderr
 	err := cmd.Run()

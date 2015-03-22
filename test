@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [[ !(-d "$(dirname $0)/tmp") ]]; then
+  mkdir "$(dirname $0)/tmp"
+fi
+cd "$(dirname $0)/tmp"
+rm -rf testrepo.git
+rm -rf testrepo
+
+git init --bare testrepo.git
+ln -s ../../../post-receive testrepo.git/hooks/post-receive
+git --git-dir=./testrepo.git config --add hooks.seapipe "../seapipe"
+
+mkdir testrepo
+cd testrepo
+git init
+git remote add origin ../testrepo.git
+cp ../../Seafile .
+git add Seafile
+git commit -m "test message"
+git push origin master

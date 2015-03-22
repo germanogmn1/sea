@@ -2,7 +2,7 @@ package main
 
 import (
 	"html/template"
-	"io"
+	"net/http"
 	"strings"
 )
 
@@ -18,8 +18,7 @@ var (
 )
 
 func InitTemplates() {
-	allTemplates := template.New("")
-	allTemplates = allTemplates.Funcs(tmplFuncMap)
+	allTemplates := template.New("").Funcs(tmplFuncMap)
 	var err error
 	allTemplates, err = allTemplates.ParseGlob("templates/*" + tmplExt)
 	if err != nil {
@@ -49,12 +48,13 @@ func InitTemplates() {
 	}
 }
 
-func RenderHtml(w io.Writer, keyName string, data interface{}) {
+func RenderHtml(w http.ResponseWriter, keyName string, data interface{}) {
 	InitTemplates() // Debug mode
 	renderTmpl := tmplMap[keyName]
 	if renderTmpl == nil {
 		panic("Template " + keyName + " not found")
 	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err := renderTmpl.ExecuteTemplate(w, "root", data)
 	if err != nil {
 		panic(err)

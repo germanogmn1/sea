@@ -1,8 +1,5 @@
 <h1>{{slice .Rev 0 10}} [{{.StateName}}]</h1>
 
-{{ .State or .StateName }}
-<button id="exec-build" type="submit">exec</button>
-
 <pre id="build-result"></pre>
 
 <script>
@@ -21,11 +18,5 @@
     };
 
     streamBuild();
-
-    getId('exec-build').addEventListener('click', function () {
-      var xhr = new XMLHttpRequest();
-      xhr.open('POST', '/build/{{.Rev}}/exec', true);
-      xhr.send();
-    });
   }());
 </script>
