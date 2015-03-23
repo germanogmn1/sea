@@ -1,5 +1,9 @@
 <h1>{{slice .Rev 0 10}} [{{.StateName}}]</h1>
 
+<p>$? = {{.ReturnCode}}</p>
+
+<button type="button" id="build-stop">stop</button>
+
 <pre id="build-result"></pre>
 
 <script>
@@ -18,5 +22,11 @@
     };
 
     streamBuild();
+
+    getId('build-stop').addEventListener('click', function (e) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/build/{{.Rev}}/stop', true);
+      xhr.send();
+    });
   }());
 </script>

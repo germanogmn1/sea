@@ -17,7 +17,7 @@ var buildList = []*Build{
 	},
 	&Build{
 		Rev:    "c21e9b8ff5f55ceeacffeadfd6d5ca4fce8dc6a7",
-		State:  BUILD_FAILURE,
+		State:  BUILD_FAILED,
 		Path:   ".",
 		Output: NewFilledOutputBuffer([]byte("fail")),
 	},

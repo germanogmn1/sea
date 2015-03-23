@@ -15,6 +15,7 @@ func WebServer(addr string) {
 	router.GET("/", indexHandler)
 	router.GET("/updates", updatesHandler)
 	router.GET("/build/:rev", showHandler)
+	router.POST("/build/:rev/stop", stopHandler)
 	router.GET("/build/:rev/stream", streamHandler)
 	log.Printf("Starting web server on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, &HTTPWrapper{router}))
@@ -45,6 +46,15 @@ func streamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		w.Write(chunk)
 		w.(http.Flusher).Flush()
 	}
+}
+
+func stopHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	build := FindBuild(ps.ByName("rev"))
+	if build == nil {
+		http.NotFound(w, r)
+		return
+	}
+	build.Stop()
 }
 
 func updatesHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

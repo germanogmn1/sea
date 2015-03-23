@@ -15,24 +15,11 @@ func StartLocalBuild(hook GitHook) {
 			panic(err)
 		}
 	}
-	repo, err := git.OpenRepository(hook.RepoPath)
-	check(err)
-	oid, err := git.NewOid(hook.NewRev)
-	check(err)
-	commit, err := repo.LookupCommit(oid)
-	check(err)
-	tree, err := commit.Tree()
-	check(err)
+
 	prefix := "sea_" + filepath.Base(hook.RepoPath)
 	directory, err := ioutil.TempDir("tmp", prefix) // TODO: delete dir somewere
 	check(err)
 	log.Printf("Temp build dir: %s", directory)
-
-	err = repo.CheckoutTree(tree, &git.CheckoutOpts{
-		Strategy:        git.CheckoutForce,
-		TargetDirectory: directory,
-	})
-	check(err)
 
 	build := &Build{
 		Rev:    hook.NewRev,
@@ -41,10 +28,27 @@ func StartLocalBuild(hook GitHook) {
 		Output: NewEmptyOutputBuffer(),
 	}
 	AddBuild(build)
-	build.Exec()
+
+	repo, err := git.OpenRepository(hook.RepoPath)
+	check(err)
+	oid, err := git.NewOid(hook.NewRev)
+	check(err)
+	commit, err := repo.LookupCommit(oid)
+	check(err)
+	tree, err := commit.Tree()
+	check(err)
+	err = repo.CheckoutTree(tree, &git.CheckoutOpts{
+		Strategy:        git.CheckoutForce,
+		TargetDirectory: directory,
+	})
+	check(err)
+
+	err = build.Exec()
+	check(err)
 }
 
 // TODO: handle SIGINT nicely (http://www.hydrogen18.com/blog/stop-listening-http-server-go.html)
+// TODO: prevent hook script from blocking when writing on pipe
 func main() {
 	var pipePath, webAddr string
 	flag.StringVar(&webAddr, "addr", ":8080", "TCP address to listen on")

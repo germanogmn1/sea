@@ -55,6 +55,7 @@ type HTTPWrapper struct {
 	Handler http.Handler
 }
 
+// http.Handler
 func (h *HTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	bw := newBufferedWriter(w)
 	start := time.Now()
@@ -63,17 +64,16 @@ func (h *HTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.handlePanic(bw, r)
 
 	duration := time.Since(start)
-	log.Printf("Completed %d %s in %v", bw.status,
-		http.StatusText(bw.status), duration)
+	log.Printf("Completed %d %s in %v", bw.status, http.StatusText(bw.status), duration)
 }
 
 func (h *HTTPWrapper) handlePanic(bw *bufferedWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Printf("Panic: %v", err)
 			if bw.flushed {
 				// TODO: response already sent to client, now what?
 			} else {
-				log.Printf("panic: %v", err)
 				bw.buffer.Reset() // discard previous rendered data
 				bw.WriteHeader(http.StatusInternalServerError)
 				renderErrorPage(bw, err)
