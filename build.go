@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"log"
 	"os/exec"
 	"path/filepath"
 	"syscall"
@@ -43,7 +42,8 @@ func (b *Build) Exec() error {
 	script := filepath.Join(b.Path, "Seafile")
 
 	cmd := exec.Command(script)
-	cmd.Stdout = &b.Output // TODO: stderr
+	cmd.Stdout = &b.Output
+	cmd.Stderr = &b.Output
 	defer b.Output.Close()
 
 	err := cmd.Start()
@@ -55,7 +55,7 @@ func (b *Build) Exec() error {
 	waitResult := make(chan error)
 	go func() { waitResult <- cmd.Wait() }()
 
-	b.cancel = make(chan struct{}, 1)
+	b.cancel = make(chan struct{}, 1) // TODO: why this channel have to be buffered?
 
 	select {
 	case err = <-waitResult:
@@ -69,7 +69,6 @@ func (b *Build) Exec() error {
 			return err
 		}
 	case <-b.cancel:
-		log.Print("------------- Cancel -------------")
 		err = cmd.Process.Kill()
 		if err != nil {
 			return err
@@ -82,7 +81,7 @@ func (b *Build) Exec() error {
 
 func (b *Build) Cancel() (err error) {
 	if b.State == BUILD_RUNNING {
-		b.cancel <- struct{}{}
+		b.cancel <- struct{}{} // TODO: maybe this shouldn't block...
 	} else {
 		err = errors.New("build must be in running state to cancel")
 	}

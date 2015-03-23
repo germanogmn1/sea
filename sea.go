@@ -6,6 +6,8 @@ import (
 	"log"
 	"path/filepath"
 
+	"os"
+
 	git "gopkg.in/libgit2/git2go.v22"
 )
 
@@ -17,7 +19,8 @@ func StartLocalBuild(hook GitHook) {
 	}
 
 	prefix := "sea_" + filepath.Base(hook.RepoPath)
-	directory, err := ioutil.TempDir("tmp", prefix) // TODO: delete dir somewere
+	directory, err := ioutil.TempDir("tmp", prefix)
+	defer check(os.RemoveAll(directory))
 	check(err)
 	log.Printf("Temp build dir: %s", directory)
 
@@ -27,7 +30,7 @@ func StartLocalBuild(hook GitHook) {
 		Path:   directory,
 		Output: NewEmptyOutputBuffer(),
 	}
-	AddBuild(build)
+	AddBuild(build) // Add build before checkout because it can take time...
 
 	repo, err := git.OpenRepository(hook.RepoPath)
 	check(err)
