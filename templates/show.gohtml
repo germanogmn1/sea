@@ -2,7 +2,7 @@
 
 <p>$? = {{.ReturnCode}}</p>
 
-<button type="button" id="build-stop">stop</button>
+<button type="button" id="build-cancel">cancel</button>
 
 <pre id="build-result"></pre>
 
@@ -23,9 +23,9 @@
 
     streamBuild();
 
-    getId('build-stop').addEventListener('click', function (e) {
+    getId('build-cancel').addEventListener('click', function (e) {
       var xhr = new XMLHttpRequest();
-      xhr.open('POST', '/build/{{.Rev}}/stop', true);
+      xhr.open('POST', '/build/{{.Rev}}/cancel', true);
       xhr.send();
     });
   }());

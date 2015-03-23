@@ -12,7 +12,7 @@ const (
 	BUILD_WAITING = iota
 	BUILD_RUNNING
 	BUILD_FAILED
-	BUILD_STOPPED
+	BUILD_CANCELED
 	BUILD_SUCCESS
 )
 
@@ -20,7 +20,7 @@ var stateNames = []string{
 	"Wating",
 	"Running",
 	"Failed",
-	"Stopped",
+	"Canceled",
 	"Success",
 }
 
@@ -31,7 +31,7 @@ type Build struct {
 	Output     OutputBuffer
 	ReturnCode int
 
-	stop chan struct{}
+	cancel chan struct{}
 }
 
 func (b *Build) StateName() string {
@@ -55,7 +55,7 @@ func (b *Build) Exec() error {
 	waitResult := make(chan error)
 	go func() { waitResult <- cmd.Wait() }()
 
-	b.stop = make(chan struct{}, 1)
+	b.cancel = make(chan struct{}, 1)
 
 	select {
 	case err = <-waitResult:
@@ -68,23 +68,23 @@ func (b *Build) Exec() error {
 		} else {
 			return err
 		}
-	case <-b.stop:
-		log.Print("------------- STOP -------------")
+	case <-b.cancel:
+		log.Print("------------- Cancel -------------")
 		err = cmd.Process.Kill()
 		if err != nil {
 			return err
 		}
-		b.State = BUILD_STOPPED
+		b.State = BUILD_CANCELED
 	}
 
 	return nil
 }
 
-func (b *Build) Stop() (err error) {
+func (b *Build) Cancel() (err error) {
 	if b.State == BUILD_RUNNING {
-		b.stop <- struct{}{}
+		b.cancel <- struct{}{}
 	} else {
-		err = errors.New("build must be in running state to stop")
+		err = errors.New("build must be in running state to cancel")
 	}
 	return
 }
