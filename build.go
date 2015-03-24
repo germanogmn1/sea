@@ -7,12 +7,14 @@ import (
 	"syscall"
 )
 
+type BuildState uint
+
 const (
-	BUILD_WAITING = iota
-	BUILD_RUNNING
-	BUILD_FAILED
-	BUILD_CANCELED
-	BUILD_SUCCESS
+	BuildWaiting BuildState = iota
+	BuildRunning
+	BuildFailed
+	BuildCanceled
+	BuildSuccess
 )
 
 var stateNames = []string{
@@ -25,7 +27,7 @@ var stateNames = []string{
 
 type Build struct {
 	Rev        string
-	State      int
+	State      BuildState
 	Path       string
 	Output     OutputBuffer
 	ReturnCode int
@@ -51,7 +53,7 @@ func (b *Build) Exec() error {
 		return err
 	}
 
-	b.State = BUILD_RUNNING
+	b.State = BuildRunning
 	waitResult := make(chan error)
 	go func() { waitResult <- cmd.Wait() }()
 
@@ -60,9 +62,9 @@ func (b *Build) Exec() error {
 	select {
 	case err = <-waitResult:
 		if err == nil {
-			b.State = BUILD_SUCCESS
+			b.State = BuildSuccess
 		} else if exit, ok := err.(*exec.ExitError); ok {
-			b.State = BUILD_FAILED
+			b.State = BuildFailed
 			ws := exit.ProcessState.Sys().(syscall.WaitStatus) // will panic if not Unix
 			b.ReturnCode = ws.ExitStatus()
 		} else {
@@ -74,14 +76,14 @@ func (b *Build) Exec() error {
 			return err
 		}
 
-		b.State = BUILD_CANCELED
+		b.State = BuildCanceled
 	}
 
 	return nil
 }
 
 func (b *Build) Cancel() (err error) {
-	if b.State == BUILD_RUNNING {
+	if b.State == BuildRunning {
 		b.cancel <- struct{}{} // TODO: maybe this shouldn't block...
 	} else {
 		err = errors.New("build must be in running state to cancel")

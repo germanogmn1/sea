@@ -28,7 +28,7 @@ func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
 
 	build := &Build{
 		Rev:    hook.NewRev,
-		State:  BUILD_WAITING,
+		State:  BuildWaiting,
 		Path:   directory,
 		Output: NewEmptyOutputBuffer(),
 	}
@@ -81,7 +81,7 @@ func main() {
 			log.Print("Exiting...")
 			close(stop)
 			for _, build := range buildList {
-				if build.State == BUILD_RUNNING {
+				if build.State == BuildRunning {
 					err := build.Cancel()
 					if err != nil {
 						log.Print("Failed to stop build:", err)
