@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"syscall"
 )
 
@@ -14,10 +15,11 @@ type GitHook struct {
 	RefName  string
 }
 
-func ListenGitHooks(pipePath string) (<-chan GitHook, <-chan error) {
+func ListenGitHooks(pipePath string, wg *sync.WaitGroup, stop chan struct{}) (<-chan GitHook, <-chan error) {
 	results := make(chan GitHook)
 	errors := make(chan error)
 	go func() {
+		defer wg.Done()
 		defer close(results)
 		defer close(errors)
 		pipe, err := createPipe(pipePath)
@@ -29,29 +31,29 @@ func ListenGitHooks(pipePath string) (<-chan GitHook, <-chan error) {
 
 		log.Printf("Listening for git hooks on %s", pipePath)
 
-		readBuffer := make([]byte, 512)
+		lines, readErrs := readPipe(pipe)
 		for {
-			var n int
-			n, err = pipe.Read(readBuffer)
-			if err != nil {
+			select {
+			case line := <-lines:
+				values := ShellSplit(line)
+				if len(values) != 4 {
+					errors <- fmt.Errorf("Invalid hook value: %q", line)
+					return
+				}
+				hook := GitHook{
+					RepoPath: values[0],
+					OldRev:   values[1],
+					NewRev:   values[2],
+					RefName:  values[3],
+				}
+				log.Printf("hook: %#v", hook)
+				results <- hook
+			case err = <-readErrs:
 				errors <- err
 				return
-			}
-			hookString := string(readBuffer[:n])
-			values := ShellSplit(hookString)
-			if len(values) != 4 {
-				err = fmt.Errorf("Invalid hook value: %q", hookString)
-				errors <- err
+			case <-stop:
 				return
 			}
-			hook := GitHook{
-				RepoPath: values[0],
-				OldRev:   values[1],
-				NewRev:   values[2],
-				RefName:  values[3],
-			}
-			log.Printf("hook: %#v", hook)
-			results <- hook
 		}
 	}()
 	return results, errors
@@ -79,4 +81,23 @@ func removePipe(file *os.File) (err error) {
 		}
 	}
 	return err
+}
+
+func readPipe(f *os.File) (<-chan string, <-chan error) {
+	results := make(chan string)
+	errors := make(chan error)
+	go func() {
+		defer close(results)
+		defer close(errors)
+		buffer := make([]byte, 512)
+		for {
+			n, err := f.Read(buffer)
+			if err != nil {
+				errors <- err
+				return
+			}
+			results <- string(buffer[:n])
+		}
+	}()
+	return results, errors
 }
