@@ -2,9 +2,15 @@ package main
 
 import (
 	"errors"
+	"io/ioutil"
+	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
+
+	git "github.com/libgit2/git2go"
 )
 
 type BuildState uint
@@ -89,4 +95,44 @@ func (b *Build) Cancel() (err error) {
 		err = errors.New("build must be in running state to cancel")
 	}
 	return
+}
+
+func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
+	defer wg.Done()
+	check := func(err error) {
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	prefix := "sea_" + filepath.Base(hook.RepoPath)
+	directory, err := ioutil.TempDir("tmp", prefix)
+	defer os.RemoveAll(directory)
+	check(err)
+	log.Printf("Temp build dir: %s", directory)
+
+	build := &Build{
+		Rev:    hook.NewRev,
+		State:  BuildWaiting,
+		Path:   directory,
+		Output: NewEmptyOutputBuffer(),
+	}
+	AddBuild(build) // Add build before checkout because it can take time...
+
+	repo, err := git.OpenRepository(hook.RepoPath)
+	check(err)
+	oid, err := git.NewOid(hook.NewRev)
+	check(err)
+	commit, err := repo.LookupCommit(oid)
+	check(err)
+	tree, err := commit.Tree()
+	check(err)
+	err = repo.CheckoutTree(tree, &git.CheckoutOpts{
+		Strategy:        git.CheckoutForce,
+		TargetDirectory: directory,
+	})
+	check(err)
+
+	err = build.Exec()
+	check(err)
 }

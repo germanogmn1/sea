@@ -17,7 +17,7 @@ type GitHook struct {
 
 func ListenGitHooks(pipePath string, wg *sync.WaitGroup, stop chan struct{}) (<-chan GitHook, <-chan error) {
 	results := make(chan GitHook)
-	errors := make(chan error)
+	errors := make(chan error, 1)
 	go func() {
 		defer wg.Done()
 		defer close(results)
@@ -85,7 +85,7 @@ func removePipe(file *os.File) (err error) {
 
 func readPipe(f *os.File) (<-chan string, <-chan error) {
 	results := make(chan string)
-	errors := make(chan error)
+	errors := make(chan error, 1)
 	go func() {
 		defer close(results)
 		defer close(errors)

@@ -2,84 +2,57 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
+	"syscall"
 
-	git "gopkg.in/libgit2/git2go.v22"
+	"github.com/boltdb/bolt"
 )
 
-func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
-	defer wg.Done()
-	check := func(err error) {
-		if err != nil {
-			panic(err)
-		}
-	}
+var DB *bolt.DB
 
-	prefix := "sea_" + filepath.Base(hook.RepoPath)
-	directory, err := ioutil.TempDir("tmp", prefix)
-	defer os.RemoveAll(directory)
-	check(err)
-	log.Printf("Temp build dir: %s", directory)
-
-	build := &Build{
-		Rev:    hook.NewRev,
-		State:  BuildWaiting,
-		Path:   directory,
-		Output: NewEmptyOutputBuffer(),
-	}
-	AddBuild(build) // Add build before checkout because it can take time...
-
-	repo, err := git.OpenRepository(hook.RepoPath)
-	check(err)
-	oid, err := git.NewOid(hook.NewRev)
-	check(err)
-	commit, err := repo.LookupCommit(oid)
-	check(err)
-	tree, err := commit.Tree()
-	check(err)
-	err = repo.CheckoutTree(tree, &git.CheckoutOpts{
-		Strategy:        git.CheckoutForce,
-		TargetDirectory: directory,
-	})
-	check(err)
-
-	err = build.Exec()
-	check(err)
-}
-
-// TODO: handle SIGINT nicely (http://www.hydrogen18.com/blog/stop-listening-http-server-go.html)
-// TODO: prevent hook script from blocking when writing on pipe
-func main() {
-	var pipePath, webAddr string
+func Run() int {
+	var pipePath, dbPath, webAddr string
 	flag.StringVar(&webAddr, "addr", ":8080", "TCP address to listen on")
-	flag.StringVar(&pipePath, "pipe", "./tmp/seapipe", "named pipe to listen for git hooks.")
+	flag.StringVar(&pipePath, "pipe", "./tmp/seapipe", "named pipe to listen for git hooks")
+	flag.StringVar(&dbPath, "db", "./tmp/sea.db", "database file")
 	flag.Parse()
 
-	go WebServer(webAddr)
+	killed := make(chan os.Signal, 1)
+	signal.Notify(killed, syscall.SIGINT, syscall.SIGTERM)
+
+	var err error
+	DB, err = bolt.Open(dbPath, 0600, nil)
+	if err != nil {
+		log.Print(err)
+		return 1
+	}
+	defer DB.Close()
+
+	webErrors := WebServer(webAddr)
 
 	var wg sync.WaitGroup
 
-	sigint := make(chan os.Signal)
-	signal.Notify(sigint, os.Interrupt)
-
-	stop := make(chan struct{})
+	quit := make(chan struct{})
 	wg.Add(1)
-	hooks, errors := ListenGitHooks(pipePath, &wg, stop)
+	hooks, hookErrors := ListenGitHooks(pipePath, &wg, quit)
+
 	for {
 		select {
 		case hook := <-hooks:
 			wg.Add(1)
 			go StartLocalBuild(hook, &wg)
-		case err := <-errors:
-			log.Fatal(err)
-		case <-sigint:
-			log.Print("Exiting...")
-			close(stop)
+		case err := <-webErrors:
+			log.Print(err)
+			return 1
+		case err := <-hookErrors:
+			log.Print(err)
+			return 1
+		case sig := <-killed:
+			log.Printf("Catched signal %q. Exiting...", sig)
+			close(quit)
 			for _, build := range buildList {
 				if build.State == BuildRunning {
 					err := build.Cancel()
@@ -89,7 +62,14 @@ func main() {
 				}
 			}
 			wg.Wait()
-			os.Exit(130)
+			return 130
 		}
 	}
+
+	return 0
+}
+
+// TODO: prevent hook script from blocking when writing on pipe
+func main() {
+	os.Exit(Run())
 }

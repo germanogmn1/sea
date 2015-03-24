@@ -9,16 +9,25 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func WebServer(addr string) {
-	InitTemplates()
-	router := httprouter.New()
-	router.GET("/", indexHandler)
-	router.GET("/updates", updatesHandler)
-	router.GET("/build/:rev", showHandler)
-	router.POST("/build/:rev/cancel", cancelHandler)
-	router.GET("/build/:rev/stream", streamHandler)
-	log.Printf("Starting web server on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, &HTTPWrapper{router}))
+func WebServer(addr string) <-chan error {
+	errors := make(chan error, 1)
+	go func() {
+		defer close(errors)
+		if err := InitTemplates(); err != nil {
+			errors <- err
+			return
+		}
+		router := httprouter.New()
+		router.GET("/", indexHandler)
+		router.GET("/updates", updatesHandler)
+		router.GET("/build/:rev", showHandler)
+		router.POST("/build/:rev/cancel", cancelHandler)
+		router.GET("/build/:rev/stream", streamHandler)
+		log.Printf("Starting web server on %v", addr)
+
+		errors <- http.ListenAndServe(addr, &HTTPWrapper{router})
+	}()
+	return errors
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
