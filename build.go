@@ -69,10 +69,11 @@ func (b *Build) Exec() error {
 			return err
 		}
 	case <-b.cancel:
-		err = cmd.Process.Kill()
-		if err != nil {
+		err = syscall.Kill(cmd.Process.Pid, syscall.SIGKILL)
+		if err != nil && err != syscall.ESRCH { // Already finished
 			return err
 		}
+
 		b.State = BUILD_CANCELED
 	}
 
