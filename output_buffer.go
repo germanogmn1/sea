@@ -1,11 +1,15 @@
 package main
 
-import "sync"
+import (
+	"log"
+	"sync"
+)
 
 type OutputBuffer struct {
-	data   []byte
-	stream chan []byte
-	mutex  sync.RWMutex
+	data      []byte
+	dataLock  sync.RWMutex
+	listeners []chan []byte
+	// listenersLock sync.Mutex
 }
 
 func NewEmptyOutputBuffer() OutputBuffer {
@@ -21,31 +25,41 @@ func NewFilledOutputBuffer(content []byte) OutputBuffer {
 	return result
 }
 
-// io.Writer implementation
+// io.Writer
 func (o *OutputBuffer) Write(p []byte) (int, error) {
-	dup := make([]byte, len(p), len(p))
-	copy(dup, p)
-	select {
-	case o.stream <- dup:
-	default:
+	for _, c := range o.listeners {
+		dup := make([]byte, len(p), len(p))
+		copy(dup, p)
+		c <- dup
 	}
-	o.mutex.Lock()
+	o.dataLock.Lock()
 	o.data = append(o.data, dup...)
-	o.mutex.Unlock()
+	o.dataLock.Unlock()
 	return len(p), nil
 }
 
-func (o *OutputBuffer) Close() { close(o.stream) }
+// io.Closer
+func (o *OutputBuffer) Close() error {
+	for _, c := range o.listeners {
+		close(c)
+	}
+	o.listeners = nil
+	log.Print("&&&&& CLOSED &&&&&")
+	return nil
+}
 
 func (o *OutputBuffer) ReadChunks() chan []byte {
 	response := make(chan []byte)
 	go func() {
-		o.mutex.RLock()
+		o.dataLock.RLock()
 		if len(o.data) > 0 {
 			response <- o.data
 		}
-		o.mutex.RUnlock()
-		for chunk := range o.stream {
+		o.dataLock.RUnlock()
+
+		newListener := make(chan []byte)
+		o.listeners = append(o.listeners, newListener)
+		for chunk := range newListener {
 			response <- chunk
 		}
 		close(response)

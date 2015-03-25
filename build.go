@@ -52,7 +52,7 @@ func (b *Build) Exec() error {
 	cmd := exec.Command(script)
 	cmd.Stdout = &b.Output
 	cmd.Stderr = &b.Output
-	defer b.Output.Close()
+	// defer b.Output.Close()
 
 	err := cmd.Start()
 	if err != nil {

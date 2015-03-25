@@ -51,9 +51,17 @@ func streamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	for chunk := range build.Output.ReadChunks() {
-		w.Write(chunk)
-		w.(http.Flusher).Flush()
+
+	closed := w.(http.CloseNotifier).CloseNotify()
+	chunks := build.Output.ReadChunks()
+	for {
+		select {
+		case chunk := <-chunks:
+			w.Write(chunk)
+			w.(http.Flusher).Flush()
+		case <-closed:
+			return
+		}
 	}
 }
 
