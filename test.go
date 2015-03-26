@@ -3,86 +3,111 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"sync"
 	"time"
 )
 
-var listeners []chan string
-var lock sync.RWMutex
-var wg sync.WaitGroup
+var listeners *entry
+var wg *sync.WaitGroup
+var lid = 1
 
-func Register() chan string {
-	c := make(chan string)
-	lock.Lock()
-	listeners = append(listeners, c)
-	lock.Unlock()
-	return c
+// data sent by channel
+type element string
+
+// doubly linked list
+type entry struct {
+	next, prev *entry
+
+	send chan element
+	quit chan struct{}
 }
 
-func Unregister(ch chan string) {
-	lock.RLock()
-	for i, c := range listeners {
-		if c == ch {
-			go func(ignore chan string) {
-				for _ = range ignore {
-				}
-			}(c)
-			lock.RUnlock()
-			lock.Lock()
-			listeners[i] = listeners[len(listeners)-1]
-			listeners = listeners[:len(listeners)-1]
-			lock.Unlock()
-			return
+func Register() (data <-chan element, quit chan<- struct{}) {
+	e := &entry{
+		send: make(chan element),
+		quit: make(chan struct{}),
+		next: listeners,
+	}
+	if listeners != nil {
+		listeners.prev = e
+	}
+	listeners = e
+	return listeners.send, listeners.quit
+}
+
+func unregister(e *entry) {
+	close(e.send)
+	if e.prev != nil {
+		e.prev.next = e.next
+	}
+	if e.next != nil {
+		e.next.prev = e.prev
+	}
+	e.prev = nil
+	e.next = nil
+	return
+}
+
+func Broadcast(message element) {
+	for e := listeners; e != nil; e = e.next {
+		select {
+		case e.send <- message:
+		case <-e.quit:
+			unregister(e)
 		}
 	}
-	lock.RUnlock()
-	panic("WTF")
-}
-
-func Broadcast(message string) {
-	lock.RLock()
-	for _, c := range listeners {
-		c <- message
-	}
-	lock.RUnlock()
 }
 
 func Close() {
-	lock.RLock()
-	for _, c := range listeners {
-		close(c)
+	for e := listeners; e != nil; e = e.next {
+		close(e.send)
+		if e.prev != nil {
+			e.prev.next = e.next
+		}
+		if e.next != nil {
+			e.next.prev = e.prev
+		}
 	}
-	lock.RUnlock()
-	lock.Lock()
-	listeners = nil
-	lock.Unlock()
 }
 
-func Listen(id int, ch chan string) {
+func Listen(id int, recv <-chan element, quit chan<- struct{}) {
 	defer wg.Done()
-	if rand.Intn(3) == 0 {
+	if rand.Intn(10) == 0 {
 		fmt.Printf("goroutine %d unregistered\n", id)
-		Unregister(ch)
-		return
+		close(quit)
 	}
-	for msg := range ch {
+	for msg := range recv {
 		fmt.Printf("goroutine %d received %q\n", id, msg)
 	}
 }
 
+func AddListeners(n int) {
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		recv, quit := Register()
+		go Listen(lid, recv, quit)
+		lid += 1
+	}
+}
+
 func main() {
+	wg = new(sync.WaitGroup)
 	rand.Seed(time.Now().UnixNano())
 
-	wg.Add(10)
-	for i := 0; i < 10; i++ {
-		go Listen(i, Register())
-	}
+	start := time.Now()
 
+	N := 10
+	AddListeners(N)
 	Broadcast("Hello!!!")
+	AddListeners(N)
 	Broadcast("World!")
+	AddListeners(N)
 	Broadcast("Bye loosers!")
+	AddListeners(N)
 	Close()
 
 	wg.Wait()
-	fmt.Println("done...")
+
+	fmt.Fprintf(os.Stderr, "%d %v\n", N, time.Since(start))
 }
