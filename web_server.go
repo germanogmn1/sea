@@ -53,13 +53,14 @@ func streamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 
 	closed := w.(http.CloseNotifier).CloseNotify()
-	chunks := build.Output.ReadChunks()
+	chunks, quit := build.Output.ReadChunks()
 	for {
 		select {
 		case chunk := <-chunks:
 			w.Write(chunk)
 			w.(http.Flusher).Flush()
 		case <-closed:
+			close(quit)
 			return
 		}
 	}

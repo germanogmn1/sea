@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"fmt"
@@ -23,30 +23,17 @@ type entry struct {
 	quit chan struct{}
 }
 
-func Register() (data <-chan element, quit chan<- struct{}) {
-	e := &entry{
-		send: make(chan element),
-		quit: make(chan struct{}),
-		next: listeners,
-	}
+func Register() (data chan element, quit chan struct{}) {
+	e := new(entry)
 	if listeners != nil {
+		e.next = listeners
 		listeners.prev = e
 	}
 	listeners = e
-	return listeners.send, listeners.quit
-}
 
-func unregister(e *entry) {
-	close(e.send)
-	if e.prev != nil {
-		e.prev.next = e.next
-	}
-	if e.next != nil {
-		e.next.prev = e.prev
-	}
-	e.prev = nil
-	e.next = nil
-	return
+	e.send = make(chan element)
+	e.quit = make(chan struct{})
+	return e.send, e.quit
 }
 
 func Broadcast(message element) {
@@ -54,7 +41,13 @@ func Broadcast(message element) {
 		select {
 		case e.send <- message:
 		case <-e.quit:
-			unregister(e)
+			close(e.send)
+			if e.next != nil {
+				e.next.prev = e.prev
+			}
+			if e.prev != nil {
+				e.prev.next = e.next
+			}
 		}
 	}
 }
@@ -62,23 +55,23 @@ func Broadcast(message element) {
 func Close() {
 	for e := listeners; e != nil; e = e.next {
 		close(e.send)
-		if e.prev != nil {
-			e.prev.next = e.next
-		}
 		if e.next != nil {
 			e.next.prev = e.prev
+		}
+		if e.prev != nil {
+			e.prev.next = e.next
 		}
 	}
 }
 
-func Listen(id int, recv <-chan element, quit chan<- struct{}) {
+func Listen(id int, recv chan element, quit chan struct{}) {
 	defer wg.Done()
-	if rand.Intn(10) == 0 {
-		fmt.Printf("goroutine %d unregistered\n", id)
+	sum := 0
+	if rand.Intn(10) == 1 {
 		close(quit)
 	}
 	for msg := range recv {
-		fmt.Printf("goroutine %d received %q\n", id, msg)
+		sum += len(msg)
 	}
 }
 
@@ -97,7 +90,7 @@ func main() {
 
 	start := time.Now()
 
-	N := 10
+	N := 1000
 	AddListeners(N)
 	Broadcast("Hello!!!")
 	AddListeners(N)
@@ -109,5 +102,5 @@ func main() {
 
 	wg.Wait()
 
-	fmt.Fprintf(os.Stderr, "%d %v\n", N, time.Since(start))
+	fmt.Fprintf(os.Stderr, "%d %v\n", N, time.Since(start).Seconds())
 }

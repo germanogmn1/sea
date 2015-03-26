@@ -8,61 +8,77 @@ import (
 type OutputBuffer struct {
 	data      []byte
 	dataLock  sync.RWMutex
-	listeners []chan []byte
-	// listenersLock sync.Mutex
+	listeners *listener
+}
+
+type listener struct {
+	next, prev *listener
+
+	data chan []byte
+	quit chan struct{}
 }
 
 func NewEmptyOutputBuffer() OutputBuffer {
-	return OutputBuffer{stream: make(chan []byte)}
+	return OutputBuffer{}
 }
 
 func NewFilledOutputBuffer(content []byte) OutputBuffer {
 	result := OutputBuffer{
-		data:   content,
-		stream: make(chan []byte),
+		data: content,
 	}
-	close(result.stream)
 	return result
 }
 
 // io.Writer
 func (o *OutputBuffer) Write(p []byte) (int, error) {
-	for _, c := range o.listeners {
+	for e := o.listeners; e != nil; e = e.next {
 		dup := make([]byte, len(p), len(p))
 		copy(dup, p)
-		c <- dup
+		select {
+		case e.data <- dup:
+		case <-e.quit:
+			if e.next != nil {
+				e.next.prev = e.prev
+			}
+			if e.prev != nil {
+				e.prev.next = e.next
+			}
+		}
 	}
 	o.dataLock.Lock()
-	o.data = append(o.data, dup...)
+	o.data = append(o.data, p...)
 	o.dataLock.Unlock()
 	return len(p), nil
 }
 
 // io.Closer
 func (o *OutputBuffer) Close() error {
-	for _, c := range o.listeners {
-		close(c)
+	for e := o.listeners; e != nil; e = e.next {
+		close(e.data)
 	}
 	o.listeners = nil
 	log.Print("&&&&& CLOSED &&&&&")
 	return nil
 }
 
-func (o *OutputBuffer) ReadChunks() chan []byte {
-	response := make(chan []byte)
+func (o *OutputBuffer) ReadChunks() (<-chan []byte, chan<- struct{}) {
+	cdata := make(chan []byte)
+	cquit := make(chan struct{})
 	go func() {
 		o.dataLock.RLock()
 		if len(o.data) > 0 {
-			response <- o.data
+			cdata <- o.data
 		}
 		o.dataLock.RUnlock()
 
-		newListener := make(chan []byte)
-		o.listeners = append(o.listeners, newListener)
-		for chunk := range newListener {
-			response <- chunk
+		e := new(listener)
+		if o.listeners != nil {
+			e.next = o.listeners
+			o.listeners.prev = e
 		}
-		close(response)
+		o.listeners = e
+		e.data = cdata
+		e.quit = cquit
 	}()
-	return response
+	return cdata, cquit
 }
