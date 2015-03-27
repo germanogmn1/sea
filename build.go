@@ -35,7 +35,7 @@ type Build struct {
 	Rev        string
 	State      BuildState
 	Path       string
-	Output     OutputBuffer
+	Output     *OutputBuffer
 	ReturnCode int
 
 	cancel chan struct{}
@@ -50,9 +50,9 @@ func (b *Build) Exec() error {
 	script := filepath.Join(b.Path, "Seafile")
 
 	cmd := exec.Command(script)
-	cmd.Stdout = &b.Output
-	cmd.Stderr = &b.Output
-	defer b.Output.Close()
+	cmd.Stdout = b.Output
+	cmd.Stderr = b.Output
+	defer b.Output.End()
 
 	err := cmd.Start()
 	if err != nil {

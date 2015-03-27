@@ -1,84 +1,65 @@
 package main
 
 import (
-	"log"
+	"io"
 	"sync"
 )
 
 type OutputBuffer struct {
-	data      []byte
-	dataLock  sync.RWMutex
-	listeners *listener
+	sync.RWMutex
+	cond *sync.Cond
+	done bool
+	data []byte
 }
 
-type listener struct {
-	next, prev *listener
-
-	data chan []byte
-	quit chan struct{}
+type reader struct {
+	*OutputBuffer
+	index int
 }
 
-func NewEmptyOutputBuffer() OutputBuffer {
-	return OutputBuffer{}
+func NewEmptyOutputBuffer() *OutputBuffer {
+	o := new(OutputBuffer)
+	o.cond = sync.NewCond(o.RLocker())
+	return o
 }
 
-func NewFilledOutputBuffer(content []byte) OutputBuffer {
-	result := OutputBuffer{
-		data: content,
-	}
-	return result
+func NewFilledOutputBuffer(content []byte) *OutputBuffer {
+	o := NewEmptyOutputBuffer()
+	o.data = content
+	o.done = true
+	return o
 }
 
-// io.Writer
 func (o *OutputBuffer) Write(p []byte) (int, error) {
-	for e := o.listeners; e != nil; e = e.next {
-		dup := make([]byte, len(p), len(p))
-		copy(dup, p)
-		select {
-		case e.data <- dup:
-		case <-e.quit:
-			if e.next != nil {
-				e.next.prev = e.prev
-			}
-			if e.prev != nil {
-				e.prev.next = e.next
-			}
-		}
-	}
-	o.dataLock.Lock()
+	o.Lock()
 	o.data = append(o.data, p...)
-	o.dataLock.Unlock()
+	o.Unlock()
+	o.cond.Broadcast()
 	return len(p), nil
 }
 
-// io.Closer
-func (o *OutputBuffer) Close() error {
-	for e := o.listeners; e != nil; e = e.next {
-		close(e.data)
-	}
-	o.listeners = nil
-	log.Print("&&&&& CLOSED &&&&&")
-	return nil
+func (o *OutputBuffer) Stream() io.Reader {
+	return &reader{o, 0}
 }
 
-func (o *OutputBuffer) ReadChunks() (<-chan []byte, chan<- struct{}) {
-	cdata := make(chan []byte)
-	cquit := make(chan struct{})
-	go func() {
-		o.dataLock.RLock()
-		if len(o.data) > 0 {
-			cdata <- o.data
-		}
-		o.dataLock.RUnlock()
+func (o *OutputBuffer) End() {
+	o.Lock()
+	o.done = true
+	o.Unlock()
+	o.cond.Broadcast()
+}
 
-		e := new(listener)
-		if o.listeners != nil {
-			e.next = o.listeners
-			o.listeners.prev = e
-		}
-		o.listeners = e
-		e.data = cdata
-		e.quit = cquit
-	}()
-	return cdata, cquit
+func (r *reader) Read(p []byte) (n int, err error) {
+	r.cond.L.Lock()
+	for !(r.done || r.index < len(r.data)) {
+		r.cond.Wait()
+	}
+	if r.index < len(r.data) {
+		n = copy(p, r.data[r.index:])
+		r.index += n
+	} else {
+		err = io.EOF
+	}
+	r.cond.L.Unlock()
+	return
 }

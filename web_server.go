@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -53,15 +54,19 @@ func streamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 
 	closed := w.(http.CloseNotifier).CloseNotify()
-	chunks, quit := build.Output.ReadChunks()
+	stream := build.Output.Stream()
+	var buffer [512]byte
 	for {
 		select {
-		case chunk := <-chunks:
-			w.Write(chunk)
-			w.(http.Flusher).Flush()
 		case <-closed:
-			close(quit)
 			return
+		default:
+			n, err := stream.Read(buffer[:])
+			if err == io.EOF {
+				return
+			}
+			w.Write(buffer[:n])
+			w.(http.Flusher).Flush()
 		}
 	}
 }
