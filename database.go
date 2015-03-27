@@ -1,26 +1,24 @@
 package main
 
-import "strings"
+import (
+	"strings"
 
-var buildList = []*Build{
-	&Build{
-		Rev:    "134d74025fbbbbcac149f206d4157890e145e8c3",
-		State:  BuildWaiting,
-		Path:   ".",
-		Output: NewEmptyOutputBuffer(),
-	},
-	&Build{
-		Rev:    "bbdc1e3744f128dfa744ab5bed520c0e5ab2e116",
-		State:  BuildSuccess,
-		Path:   ".",
-		Output: NewFilledOutputBuffer([]byte("success")),
-	},
-	&Build{
-		Rev:    "c21e9b8ff5f55ceeacffeadfd6d5ca4fce8dc6a7",
-		State:  BuildFailed,
-		Path:   ".",
-		Output: NewFilledOutputBuffer([]byte("fail")),
-	},
+	"github.com/boltdb/bolt"
+)
+
+var DB *bolt.DB
+var buildsRunning []*Build
+
+func InitDB(dbPath string) error {
+	var err error
+	DB, err = bolt.Open(dbPath, 0600, nil)
+	if err != nil {
+		return err
+	}
+	return DB.Update(func(tx *bolt.Tx) error {
+		_, e := tx.CreateBucketIfNotExists([]byte("builds"))
+		return e
+	})
 }
 
 func AddBuild(b *Build) {

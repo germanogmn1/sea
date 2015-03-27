@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"sync"
 )
@@ -17,6 +18,30 @@ type reader struct {
 	index int
 }
 
+// fmt.Stringer
+func (o *OutputBuffer) String() string {
+	o.RLock()
+	s := "open"
+	if o.done {
+		s = "done"
+	}
+	str := fmt.Sprintf("OutputBuffer[%s]{%q}", doneStr, o.data)
+	o.RUnlock()
+	return str
+}
+
+// encoding.BinaryMarshaler
+func (o *OutputBuffer) MarshalBinary() (data []byte, err error) {
+	o.RLock()
+
+	o.RUnlock()
+}
+
+// encoding.BinaryUnmarshaler
+func (o *OutputBuffer) UnmarshalBinary(data []byte) error {
+
+}
+
 func NewEmptyOutputBuffer() *OutputBuffer {
 	o := new(OutputBuffer)
 	o.cond = sync.NewCond(o.RLocker())
@@ -30,6 +55,7 @@ func NewFilledOutputBuffer(content []byte) *OutputBuffer {
 	return o
 }
 
+// io.Writer
 func (o *OutputBuffer) Write(p []byte) (int, error) {
 	o.Lock()
 	o.data = append(o.data, p...)
@@ -49,6 +75,7 @@ func (o *OutputBuffer) End() {
 	o.cond.Broadcast()
 }
 
+// io.Reader
 func (r *reader) Read(p []byte) (n int, err error) {
 	r.cond.L.Lock()
 	for !(r.done || r.index < len(r.data)) {

@@ -7,11 +7,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-
-	"github.com/boltdb/bolt"
 )
-
-var DB *bolt.DB
 
 func Run() int {
 	var pipePath, dbPath, webAddr string
@@ -23,9 +19,7 @@ func Run() int {
 	killed := make(chan os.Signal, 1)
 	signal.Notify(killed, syscall.SIGINT, syscall.SIGTERM)
 
-	var err error
-	DB, err = bolt.Open(dbPath, 0600, nil)
-	if err != nil {
+	if err := InitDB(dbPath); err != nil {
 		log.Print(err)
 		return 1
 	}

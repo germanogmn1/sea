@@ -16,15 +16,13 @@ import (
 type BuildState uint
 
 const (
-	BuildWaiting BuildState = iota
-	BuildRunning
+	BuildRunning BuildState = iota
 	BuildFailed
 	BuildCanceled
 	BuildSuccess
 )
 
 var stateNames = []string{
-	"Wating",
 	"Running",
 	"Failed",
 	"Canceled",
@@ -45,7 +43,7 @@ func (b *Build) StateName() string {
 	return stateNames[b.State]
 }
 
-// TODO: what to do with build state on error?
+// TODO: what to do with build state on error? Canceled?
 func (b *Build) Exec() error {
 	script := filepath.Join(b.Path, "Seafile")
 
@@ -59,7 +57,6 @@ func (b *Build) Exec() error {
 		return err
 	}
 
-	b.State = BuildRunning
 	waitResult := make(chan error)
 	go func() { waitResult <- cmd.Wait() }()
 
@@ -92,7 +89,7 @@ func (b *Build) Cancel() (err error) {
 	if b.State == BuildRunning {
 		b.cancel <- struct{}{} // TODO: maybe this shouldn't block...
 	} else {
-		err = errors.New("build must be in running state to cancel")
+		err = errors.New("build must be running to cancel")
 	}
 	return
 }
@@ -104,20 +101,6 @@ func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
 			panic(err)
 		}
 	}
-
-	prefix := "sea_" + filepath.Base(hook.RepoPath)
-	directory, err := ioutil.TempDir("tmp", prefix)
-	defer os.RemoveAll(directory)
-	check(err)
-	log.Printf("Temp build dir: %s", directory)
-
-	build := &Build{
-		Rev:    hook.NewRev,
-		State:  BuildWaiting,
-		Path:   directory,
-		Output: NewEmptyOutputBuffer(),
-	}
-	AddBuild(build) // Add build before checkout because it can take time...
 
 	repo, err := git.OpenRepository(hook.RepoPath)
 	check(err)
@@ -133,6 +116,21 @@ func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
 	})
 	check(err)
 
+	prefix := "sea_" + filepath.Base(hook.RepoPath)
+	directory, err := ioutil.TempDir("tmp", prefix)
+	defer os.RemoveAll(directory)
+	check(err)
+	log.Printf("Temp build dir: %s", directory)
+
+	// TODO: how to notify users of errors that ocurred before the build started
+	// to execute?
+	build := &Build{
+		Rev:    hook.NewRev,
+		State:  BuildRunning,
+		Path:   directory,
+		Output: NewEmptyOutputBuffer(),
+	}
+	AddBuild(build)
 	err = build.Exec()
 	check(err)
 }
