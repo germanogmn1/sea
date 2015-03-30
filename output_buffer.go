@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -25,7 +26,7 @@ func (o *OutputBuffer) String() string {
 	if o.done {
 		s = "done"
 	}
-	str := fmt.Sprintf("OutputBuffer[%s]{%q}", doneStr, o.data)
+	str := fmt.Sprintf("OutputBuffer[%s]{%q}", s, o.data)
 	o.RUnlock()
 	return str
 }
@@ -33,26 +34,41 @@ func (o *OutputBuffer) String() string {
 // encoding.BinaryMarshaler
 func (o *OutputBuffer) MarshalBinary() (data []byte, err error) {
 	o.RLock()
-
+	if o.done {
+		data = make([]byte, len(o.data))
+		copy(data, o.data)
+	} else {
+		err = errors.New("can't encode open buffers")
+	}
 	o.RUnlock()
+	return
 }
 
 // encoding.BinaryUnmarshaler
 func (o *OutputBuffer) UnmarshalBinary(data []byte) error {
-
+	o.init()
+	o.data = make([]byte, len(data))
+	copy(o.data, data)
+	o.done = true
+	return nil
 }
 
 func NewEmptyOutputBuffer() *OutputBuffer {
 	o := new(OutputBuffer)
-	o.cond = sync.NewCond(o.RLocker())
+	o.init()
 	return o
 }
 
 func NewFilledOutputBuffer(content []byte) *OutputBuffer {
-	o := NewEmptyOutputBuffer()
+	o := new(OutputBuffer)
+	o.init()
 	o.data = content
 	o.done = true
 	return o
+}
+
+func (o *OutputBuffer) init() {
+	o.cond = sync.NewCond(o.RLocker())
 }
 
 // io.Writer

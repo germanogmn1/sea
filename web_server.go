@@ -32,7 +32,7 @@ func WebServer(addr string) <-chan error {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	RenderHtml(w, "index", buildList)
+	RenderHtml(w, "index", buildsRunning)
 }
 
 func showHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

@@ -22,11 +22,16 @@ const (
 	BuildSuccess
 )
 
-var stateNames = []string{
+var stateNames = [...]string{
 	"Running",
 	"Failed",
 	"Canceled",
 	"Success",
+}
+
+// fmt.Stringer
+func (s BuildState) String() string {
+	return stateNames[s]
 }
 
 type Build struct {
@@ -37,10 +42,6 @@ type Build struct {
 	ReturnCode int
 
 	cancel chan struct{}
-}
-
-func (b *Build) StateName() string {
-	return stateNames[b.State]
 }
 
 // TODO: what to do with build state on error? Canceled?
@@ -102,6 +103,12 @@ func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
 		}
 	}
 
+	prefix := "sea_" + filepath.Base(hook.RepoPath)
+	directory, err := ioutil.TempDir("tmp", prefix)
+	defer os.RemoveAll(directory)
+	check(err)
+	log.Printf("Temp build dir: %s", directory)
+
 	repo, err := git.OpenRepository(hook.RepoPath)
 	check(err)
 	oid, err := git.NewOid(hook.NewRev)
@@ -115,12 +122,6 @@ func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
 		TargetDirectory: directory,
 	})
 	check(err)
-
-	prefix := "sea_" + filepath.Base(hook.RepoPath)
-	directory, err := ioutil.TempDir("tmp", prefix)
-	defer os.RemoveAll(directory)
-	check(err)
-	log.Printf("Temp build dir: %s", directory)
 
 	// TODO: how to notify users of errors that ocurred before the build started
 	// to execute?

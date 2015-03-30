@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"strings"
 
 	"github.com/boltdb/bolt"
 )
 
-var DB *bolt.DB
-var buildsRunning []*Build
+var (
+	DB            *bolt.DB
+	buildsRunning []*Build
+)
 
 func InitDB(dbPath string) error {
 	var err error
@@ -22,14 +25,26 @@ func InitDB(dbPath string) error {
 }
 
 func AddBuild(b *Build) {
-	buildList = append(buildList, b)
+	buildsRunning = append(buildsRunning, b)
 }
 
 func FindBuild(rev string) *Build {
-	for i := range buildList {
-		if strings.HasPrefix(buildList[i].Rev, rev) {
-			return buildList[i]
+	for i := range buildsRunning {
+		if strings.HasPrefix(buildsRunning[i].Rev, rev) {
+			return buildsRunning[i]
 		}
 	}
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("builds"))
+
+		prefix := []byte(rev)
+		k, v := c.Seek(prefix)
+		k, v = c.Next()
+		bytes.HasPrefix(k, prefix)
+
+		return nil
+	})
+
 	return nil
 }

@@ -75,10 +75,7 @@ func createPipe(path string) (file *os.File, err error) {
 
 func removePipe(file *os.File) (err error) {
 	if file != nil {
-		err = file.Close()
-		if err == nil {
-			err = os.Remove(file.Name())
-		}
+		err = os.Remove(file.Name())
 	}
 	return err
 }

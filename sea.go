@@ -47,7 +47,7 @@ func Run() int {
 		case sig := <-killed:
 			log.Printf("Catched signal %q. Exiting...", sig)
 			close(quit)
-			for _, build := range buildList {
+			for _, build := range buildsRunning {
 				if build.State == BuildRunning {
 					err := build.Cancel()
 					if err != nil {
