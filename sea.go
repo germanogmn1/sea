@@ -2,11 +2,14 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/libgit2/git2go"
 )
 
 func Run() int {
@@ -58,5 +61,29 @@ func Run() int {
 
 // TODO: prevent hook script from blocking when writing on pipe
 func main() {
-	os.Exit(Run())
+	// os.Exit(Run())
+	dir, err := ioutil.TempDir("", "repo")
+	if err != nil {
+		log.Fatal(err)
+	}
+	repo, err := git.Clone("git@github.com:germanogmn1/sea.git", dir, &git.CloneOptions{
+		RemoteCallbacks: &git.RemoteCallbacks{
+			CredentialsCallback:      credentialsCallback,
+			CertificateCheckCallback: certificateCheckCallback,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Print(repo.Path())
+}
+
+func credentialsCallback(url string, username_from_url string, allowed_types git.CredType) (git.ErrorCode, *git.Cred) {
+	log.Fatalf("credentialsCallback(%s, %s, %s)", url, username_from_url, allowed_types)
+	return git.ErrOk, nil
+}
+
+func certificateCheckCallback(cert *git.Certificate, valid bool, hostname string) git.ErrorCode {
+	log.Printf("certificateCheckCallback(%v, %v, %v)", cert, valid, hostname)
+	return git.ErrOk
 }
