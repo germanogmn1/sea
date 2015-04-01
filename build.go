@@ -38,20 +38,25 @@ type Build struct {
 	Rev        string
 	State      BuildState
 	Path       string
-	Output     *OutputBuffer
+	Output     []byte
 	ReturnCode int
 
 	cancel chan struct{}
 }
 
 // TODO: what to do with build state on error? Canceled?
-func (b *Build) Exec() error {
+func (b *Build) Exec(output *OutputBuffer) error {
 	script := filepath.Join(b.Path, "Seafile")
 
 	cmd := exec.Command(script)
-	cmd.Stdout = b.Output
-	cmd.Stderr = b.Output
-	defer b.Output.End()
+	cmd.Stdout = output
+	cmd.Stderr = output
+	defer func() {
+		output.End()
+		b.Output = output.Bytes()
+		SaveBuild(b)
+		RunningBuilds.Remove(b.Rev)
+	}()
 
 	err := cmd.Start()
 	if err != nil {
@@ -79,7 +84,6 @@ func (b *Build) Exec() error {
 		if err != nil && err != syscall.ESRCH { // Already finished
 			return err
 		}
-
 		b.State = BuildCanceled
 	}
 
@@ -126,12 +130,13 @@ func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
 	// TODO: how to notify users of errors that ocurred before the build started
 	// to execute?
 	build := &Build{
-		Rev:    hook.NewRev,
-		State:  BuildRunning,
-		Path:   directory,
-		Output: NewEmptyOutputBuffer(),
+		Rev:   hook.NewRev,
+		State: BuildRunning,
+		Path:  directory,
 	}
-	AddBuild(build)
-	err = build.Exec()
+	out := NewEmptyOutputBuffer()
+	RunningBuilds.Add(build, out)
+	SaveBuild(build)
+	err = build.Exec(out)
 	check(err)
 }

@@ -7,8 +7,9 @@ for i in {1..20}; do
   sleep 1
 done
 
-echo "Oops, catastrophic failure" 1>&2
-exit 83
-sleep 1
-
-echo "Finished running"
+if (( $RANDOM % 2 )); then
+  echo "Finished running"
+else
+  echo "Oops, catastrophic failure" 1>&2
+  exit 83
+fi

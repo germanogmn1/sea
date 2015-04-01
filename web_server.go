@@ -32,7 +32,7 @@ func WebServer(addr string) <-chan error {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	RenderHtml(w, "index", buildsRunning)
+	RenderHtml(w, "index", AllBuilds())
 }
 
 func showHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -50,11 +50,22 @@ func streamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		http.NotFound(w, r)
 		return
 	}
+
+	if build.State != BuildRunning {
+		w.Write(build.Output)
+		return
+	}
+
+	entry := RunningBuilds.Get(build.Rev)
+	if entry == nil {
+		panic("build state is BuildRunning but no running entry was found")
+	}
+	stream := entry.Stream()
+
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 
 	closed := w.(http.CloseNotifier).CloseNotify()
-	stream := build.Output.Stream()
 	var buffer [512]byte
 	for {
 		select {

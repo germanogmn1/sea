@@ -91,6 +91,10 @@ func (o *OutputBuffer) End() {
 	o.cond.Broadcast()
 }
 
+func (o *OutputBuffer) Bytes() []byte {
+	return o.data
+}
+
 // io.Reader
 func (r *reader) Read(p []byte) (n int, err error) {
 	r.cond.L.Lock()
