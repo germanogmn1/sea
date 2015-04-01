@@ -83,7 +83,7 @@ func streamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 }
 
 func cancelHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	build := FindBuild(ps.ByName("rev"))
+	build := RunningBuilds.Get(ps.ByName("rev"))
 	if build == nil {
 		http.NotFound(w, r)
 		return

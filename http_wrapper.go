@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -24,6 +25,8 @@ func newBufferedWriter(w http.ResponseWriter) *bufferedWriter {
 		status: http.StatusOK,
 	}
 }
+
+var requestId uint32
 
 // http.ResponseWriter
 func (bw *bufferedWriter) Header() http.Header         { return bw.rw.Header() }
@@ -59,12 +62,16 @@ type HTTPWrapper struct {
 func (h *HTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	bw := newBufferedWriter(w)
 	start := time.Now()
-	log.Printf("Started %s %q", r.Method, r.RequestURI)
+
+	atomic.AddUint32(&requestId, 1)
+	id := requestId
+
+	log.Printf("#%d Started %s %q", id, r.Method, r.RequestURI)
 
 	h.handlePanic(bw, r)
 
 	duration := time.Since(start)
-	log.Printf("Completed %d %s in %v", bw.status, http.StatusText(bw.status), duration)
+	log.Printf("#%d Completed %d %s in %v", id, bw.status, http.StatusText(bw.status), duration)
 }
 
 func (h *HTTPWrapper) handlePanic(bw *bufferedWriter, r *http.Request) {

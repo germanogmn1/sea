@@ -66,7 +66,7 @@ func (b *Build) Exec(output *OutputBuffer) error {
 	waitResult := make(chan error)
 	go func() { waitResult <- cmd.Wait() }()
 
-	b.cancel = make(chan struct{}, 1) // TODO: why this channel have to be buffered?
+	b.cancel = make(chan struct{}, 1)
 
 	select {
 	case err = <-waitResult:
