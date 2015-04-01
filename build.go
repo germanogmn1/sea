@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -9,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+	"time"
 
 	git "github.com/libgit2/git2go"
 )
@@ -40,22 +40,37 @@ type Build struct {
 	Path       string
 	Output     []byte
 	ReturnCode int
+	StartedAt  time.Time
+	FinishedAt time.Time
+}
 
+func (b *Build) Duration() time.Duration {
+	return b.FinishedAt.Sub(b.StartedAt)
+}
+
+type RunningBuild struct {
+	*Build
+	Buffer *OutputBuffer
 	cancel chan struct{}
 }
 
-// TODO: what to do with build state on error? Canceled?
-func (b *Build) Exec(output *OutputBuffer) error {
+func NewRunningBuild(b *Build) RunningBuild {
+	return RunningBuild{
+		Build:  b,
+		Buffer: NewOutputBuffer(),
+		cancel: make(chan struct{}, 1),
+	}
+}
+
+func (b *RunningBuild) Exec() error {
 	script := filepath.Join(b.Path, "Seafile")
 
 	cmd := exec.Command(script)
-	cmd.Stdout = output
-	cmd.Stderr = output
+	cmd.Stdout = b.Buffer
+	cmd.Stderr = b.Buffer
 	defer func() {
-		output.End()
-		b.Output = output.Bytes()
-		SaveBuild(b)
-		RunningBuilds.Remove(b.Rev)
+		b.Buffer.End()
+		b.Output = b.Buffer.Bytes()
 	}()
 
 	err := cmd.Start()
@@ -66,8 +81,6 @@ func (b *Build) Exec(output *OutputBuffer) error {
 	waitResult := make(chan error)
 	go func() { waitResult <- cmd.Wait() }()
 
-	b.cancel = make(chan struct{}, 1)
-
 	select {
 	case err = <-waitResult:
 		if err == nil {
@@ -77,7 +90,7 @@ func (b *Build) Exec(output *OutputBuffer) error {
 			ws := exit.ProcessState.Sys().(syscall.WaitStatus) // will panic if not Unix
 			b.ReturnCode = ws.ExitStatus()
 		} else {
-			return err
+			panic(err)
 		}
 	case <-b.cancel:
 		err = syscall.Kill(cmd.Process.Pid, syscall.SIGKILL)
@@ -90,13 +103,8 @@ func (b *Build) Exec(output *OutputBuffer) error {
 	return nil
 }
 
-func (b *Build) Cancel() (err error) {
-	if b.State == BuildRunning {
-		b.cancel <- struct{}{} // TODO: maybe this shouldn't block...
-	} else {
-		err = errors.New("build must be running to cancel")
-	}
-	return
+func (b *RunningBuild) Cancel() {
+	close(b.cancel)
 }
 
 func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
@@ -129,14 +137,17 @@ func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
 
 	// TODO: how to notify users of errors that ocurred before the build started
 	// to execute?
-	build := &Build{
-		Rev:   hook.NewRev,
-		State: BuildRunning,
-		Path:  directory,
-	}
-	out := NewEmptyOutputBuffer()
-	RunningBuilds.Add(build, out)
-	SaveBuild(build)
-	err = build.Exec(out)
+	build := NewRunningBuild(&Build{
+		Rev:       hook.NewRev,
+		State:     BuildRunning,
+		Path:      directory,
+		StartedAt: time.Now(),
+	})
+	RunningBuilds.Add(build)
+	SaveBuild(build.Build)
+	defer RunningBuilds.Remove(build.Rev)
+	defer SaveBuild(build.Build)
+	defer func() { build.FinishedAt = time.Now() }()
+	err = build.Exec()
 	check(err)
 }

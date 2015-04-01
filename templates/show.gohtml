@@ -1,6 +1,8 @@
 <h1>{{slice .Rev 0 10}} [{{.State}}]</h1>
 
 <p>$? = {{.ReturnCode}}</p>
+<p>StartedAt = {{.StartedAt.Format "2006-01-02 15:04"}}</p>
+<p>Duration = {{.Duration}}</p>
 
 <button type="button" id="build-cancel">cancel</button>
 

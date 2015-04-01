@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -31,44 +30,10 @@ func (o *OutputBuffer) String() string {
 	return str
 }
 
-// encoding.BinaryMarshaler
-func (o *OutputBuffer) MarshalBinary() (data []byte, err error) {
-	o.RLock()
-	if o.done {
-		data = make([]byte, len(o.data))
-		copy(data, o.data)
-	} else {
-		err = errors.New("can't encode open buffers")
-	}
-	o.RUnlock()
-	return
-}
-
-// encoding.BinaryUnmarshaler
-func (o *OutputBuffer) UnmarshalBinary(data []byte) error {
-	o.init()
-	o.data = make([]byte, len(data))
-	copy(o.data, data)
-	o.done = true
-	return nil
-}
-
-func NewEmptyOutputBuffer() *OutputBuffer {
+func NewOutputBuffer() *OutputBuffer {
 	o := new(OutputBuffer)
-	o.init()
-	return o
-}
-
-func NewFilledOutputBuffer(content []byte) *OutputBuffer {
-	o := new(OutputBuffer)
-	o.init()
-	o.data = content
-	o.done = true
-	return o
-}
-
-func (o *OutputBuffer) init() {
 	o.cond = sync.NewCond(o.RLocker())
+	return o
 }
 
 // io.Writer

@@ -56,11 +56,11 @@ func streamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		return
 	}
 
-	entry := RunningBuilds.Get(build.Rev)
-	if entry == nil {
-		panic("build state is BuildRunning but no running entry was found")
+	running, ok := RunningBuilds.Get(build.Rev)
+	if !ok {
+		panic("build state is BuildRunning but no running build was found")
 	}
-	stream := entry.Stream()
+	stream := running.Buffer.Stream()
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -83,8 +83,8 @@ func streamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 }
 
 func cancelHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	build := RunningBuilds.Get(ps.ByName("rev"))
-	if build == nil {
+	build, ok := RunningBuilds.Get(ps.ByName("rev"))
+	if !ok {
 		http.NotFound(w, r)
 		return
 	}

@@ -4,16 +4,10 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
-	"log"
 	"sync"
 
 	"github.com/boltdb/bolt"
 )
-
-type RunningEntry struct {
-	*Build
-	*OutputBuffer
-}
 
 type RunningList struct {
 	sync.RWMutex
@@ -21,12 +15,12 @@ type RunningList struct {
 	// Stores the output buffer of running builds indexed by revision hash.
 	// There is a non-zero chance that commits of different git repositories to have
 	// the same hash, but it's is very unlikely.
-	m map[string]RunningEntry
+	m map[string]RunningBuild
 }
 
-func (l *RunningList) Add(build *Build, out *OutputBuffer) {
+func (l *RunningList) Add(build RunningBuild) {
 	l.Lock()
-	l.m[build.Rev] = RunningEntry{build, out}
+	l.m[build.Rev] = build
 	l.Unlock()
 }
 
@@ -36,25 +30,17 @@ func (l *RunningList) Remove(rev string) {
 	l.Unlock()
 }
 
-func (l *RunningList) Get(rev string) *RunningEntry {
+func (l *RunningList) Get(rev string) (RunningBuild, bool) {
 	l.RLock()
 	entry, ok := l.m[rev]
 	l.RUnlock()
-	if ok {
-		return &entry
-	} else {
-		return nil
-	}
+	return entry, ok
 }
 
 func (l *RunningList) CancelAll() {
-	var err error
 	l.RLock()
-	for _, v := range l.m {
-		err = v.Cancel()
-		if err != nil {
-			log.Print("Failed to stop build: ", err)
-		}
+	for _, build := range l.m {
+		build.Cancel()
 	}
 	l.RUnlock()
 }
@@ -63,7 +49,7 @@ var RunningBuilds RunningList
 var DB *bolt.DB
 
 func InitDB(dbPath string) error {
-	RunningBuilds = RunningList{sync.RWMutex{}, make(map[string]RunningEntry)}
+	RunningBuilds = RunningList{sync.RWMutex{}, make(map[string]RunningBuild)}
 
 	var err error
 	DB, err = bolt.Open(dbPath, 0600, nil)
