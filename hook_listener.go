@@ -15,21 +15,21 @@ type GitHook struct {
 	RefName  string
 }
 
-func ListenGitHooks(pipePath string, wg *sync.WaitGroup, stop chan struct{}) (<-chan GitHook, <-chan error) {
+func ListenGitHooks(wg *sync.WaitGroup, stop chan struct{}) (<-chan GitHook, <-chan error) {
 	results := make(chan GitHook)
 	errors := make(chan error, 1)
 	go func() {
 		defer wg.Done()
 		defer close(results)
 		defer close(errors)
-		pipe, err := createPipe(pipePath)
+		pipe, err := createPipe()
 		if err != nil {
 			errors <- err
 			return
 		}
 		defer removePipe(pipe)
 
-		log.Printf("Listening for git hooks on %s", pipePath)
+		log.Printf("Listening for git hooks on %s", pipe.Name())
 
 		lines, readErrs := readPipe(pipe)
 		for {
@@ -59,16 +59,16 @@ func ListenGitHooks(pipePath string, wg *sync.WaitGroup, stop chan struct{}) (<-
 	return results, errors
 }
 
-func createPipe(path string) (file *os.File, err error) {
+func createPipe() (file *os.File, err error) {
 	oldmask := syscall.Umask(0)
-	err = syscall.Mkfifo(path, 0622)
+	err = syscall.Mkfifo(Config.PipePath, 0622)
 	syscall.Umask(oldmask)
 	if err != nil {
 		return
 	}
-	file, err = os.OpenFile(path, os.O_RDWR, 0)
+	file, err = os.OpenFile(Config.PipePath, os.O_RDWR, 0)
 	if err != nil {
-		os.Remove(path) // TODO: ignore error?
+		os.Remove(Config.PipePath) // TODO: ignore error?
 	}
 	return
 }

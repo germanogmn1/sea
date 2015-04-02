@@ -10,7 +10,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func WebServer(addr string) <-chan error {
+func WebServer() <-chan error {
 	errors := make(chan error, 1)
 	go func() {
 		defer close(errors)
@@ -24,9 +24,9 @@ func WebServer(addr string) <-chan error {
 		router.GET("/build/:rev", showHandler)
 		router.POST("/build/:rev/cancel", cancelHandler)
 		router.GET("/build/:rev/stream", streamHandler)
-		log.Printf("Starting web server on %v", addr)
+		log.Printf("Starting web server on %v", Config.WebAddr)
 
-		errors <- http.ListenAndServe(addr, &HTTPWrapper{router})
+		errors <- http.ListenAndServe(Config.WebAddr, &HTTPWrapper{router})
 	}()
 	return errors
 }

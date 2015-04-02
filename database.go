@@ -48,11 +48,11 @@ func (l *RunningList) CancelAll() {
 var RunningBuilds RunningList
 var DB *bolt.DB
 
-func InitDB(dbPath string) error {
+func InitDB() error {
 	RunningBuilds = RunningList{sync.RWMutex{}, make(map[string]RunningBuild)}
 
 	var err error
-	DB, err = bolt.Open(dbPath, 0600, nil)
+	DB, err = bolt.Open(Config.DBPath, 0600, nil)
 	if err != nil {
 		return err
 	}

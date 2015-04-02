@@ -2,39 +2,43 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-
-	"github.com/libgit2/git2go"
 )
 
+var Config struct {
+	WebAddr   string
+	PipePath  string
+	DBPath    string
+	ReposPath string
+}
+
 func Run() int {
-	var pipePath, dbPath, webAddr string
-	flag.StringVar(&webAddr, "addr", ":8080", "TCP address to listen on")
-	flag.StringVar(&pipePath, "pipe", "./tmp/seapipe", "named pipe to listen for git hooks")
-	flag.StringVar(&dbPath, "db", "./tmp/sea.db", "database file")
+	flag.StringVar(&Config.WebAddr, "addr", ":8080", "TCP address for web server to listen on")
+	flag.StringVar(&Config.PipePath, "pipe", "./tmp/seapipe", "named pipe to listen for git hooks")
+	flag.StringVar(&Config.DBPath, "db", "./tmp/sea.db", "database file")
+	flag.StringVar(&Config.ReposPath, "repos", "./tmp/repos", "directory to store registered repositories")
 	flag.Parse()
 
 	killed := make(chan os.Signal, 1)
 	signal.Notify(killed, syscall.SIGINT, syscall.SIGTERM)
 
-	if err := InitDB(dbPath); err != nil {
+	if err := InitDB(); err != nil {
 		log.Print(err)
 		return 1
 	}
 	defer DB.Close()
 
-	webErrors := WebServer(webAddr)
+	webErrors := WebServer()
 
 	var wg sync.WaitGroup
 
 	quit := make(chan struct{})
 	wg.Add(1)
-	hooks, hookErrors := ListenGitHooks(pipePath, &wg, quit)
+	hooks, hookErrors := ListenGitHooks(&wg, quit)
 
 	for {
 		select {
@@ -61,29 +65,5 @@ func Run() int {
 
 // TODO: prevent hook script from blocking when writing on pipe
 func main() {
-	// os.Exit(Run())
-	dir, err := ioutil.TempDir("", "repo")
-	if err != nil {
-		log.Fatal(err)
-	}
-	repo, err := git.Clone("git@github.com:germanogmn1/sea.git", dir, &git.CloneOptions{
-		RemoteCallbacks: &git.RemoteCallbacks{
-			CredentialsCallback:      credentialsCallback,
-			CertificateCheckCallback: certificateCheckCallback,
-		},
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Print(repo.Path())
-}
-
-func credentialsCallback(url string, username_from_url string, allowed_types git.CredType) (git.ErrorCode, *git.Cred) {
-	log.Fatalf("credentialsCallback(%s, %s, %s)", url, username_from_url, allowed_types)
-	return git.ErrOk, nil
-}
-
-func certificateCheckCallback(cert *git.Certificate, valid bool, hostname string) git.ErrorCode {
-	log.Printf("certificateCheckCallback(%v, %v, %v)", cert, valid, hostname)
-	return git.ErrOk
+	os.Exit(Run())
 }
