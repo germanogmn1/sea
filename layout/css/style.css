@@ -1,0 +1,180 @@
+* { box-sizing: border-box; }
+:focus {
+  outline: none;
+}
+
+html {
+  height: 100%;
+  font-family: 'Alegreya Sans', Helvetica, Arial, sans-serif;
+  color: #444;
+  line-height: 1.45;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+#sidebar {
+  color: #fff;
+  background-color: #3ea5a5;
+  width: 250px;
+  flex-grow: 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: strech;
+  flex-direction: column;
+}
+
+#sidebar-menu {
+  flex-grow: 0;
+  flex-shrink: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+  height: 50px;
+}
+
+#sidebar-content {
+  flex-grow: 1;
+  flex-shrink: 1;
+  padding: 16px;
+}
+
+#sidebar-account {
+  flex-grow: 0;
+  flex-shrink: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+  height: 50px;
+  padding: 12px;
+}
+
+#sidebar-account .user-avatar {
+  display: block;
+  float: left;
+}
+
+#sidebar-account .user-name {
+  float: left;
+  margin-left: 6px;
+  line-height: 26px;
+}
+
+#sidebar-account .user-logout {
+  float: right;
+  line-height: 26px;
+  font-size: 1.5em;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+#sidebar-account .user-logout:hover {
+  color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 13px;
+}
+
+#main {
+  box-sizing: border-box;
+
+  flex-grow: 1;
+  flex-shrink: 1;
+
+  overflow-y: scroll;
+}
+
+#main-header {
+  padding-left: 16px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 1) 90%, rgba(255, 255, 255, 0) 100%);
+  position: fixed;
+  left: 250px;
+  right: 0;
+}
+
+#main-content {
+  padding: 60px 16px 0;
+}
+
+.project-name small {
+  color: #999;
+  font-weight: normal;
+}
+
+.projects-dropdown {
+  position: relative;
+}
+
+.projects-dropdown .selected {
+  font-size: 1.5em;
+  display: block;
+  padding: 0 12px;
+  cursor: pointer;
+  line-height: 50px;
+}
+
+.projects-dropdown .selected .typcn {
+  font-size: 0.8em;
+  vertical-align: middle;
+}
+
+.projects-dropdown.open .selected {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.projects-dropdown.open .projects-dropdown-options {
+  display: block;
+}
+
+.projects-dropdown-options {
+  display: none;
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+
+  margin: 0;
+  padding: 0;
+  background-color: #fff;
+  color: #444;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+.projects-dropdown-options a {
+  color: inherit;
+  display: block;
+  padding: 6px 12px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.projects-dropdown-options a:hover {
+  background-color: #aaa;
+  color: #fff;
+  font-weight: bold;
+}
+
+.projects-dropdown-options li {
+  list-style-type: none;
+}
+
+.projects-dropdown-options li.separator {
+  border-bottom: 1px solid #aaa;
+  margin: 6px 0;
+}
+
+@-webkit-keyframes spin {
+  from {
+    -webkit-transform: rotate(0deg);
+  }
+  to {
+    -webkit-transform: rotate(360deg);
+  }
+}
+
+.icon-success { color: hsl(120, 70%, 70%); }
+.icon-failure { color: hsl(0, 70%, 70%); }
+.icon-running {
+  display: inline-block;
+  transform-origin: 50% 53%;
+  -webkit-animation: spin 1.5s infinite linear;
+  color: hsl(60, 70%, 70%);
+}

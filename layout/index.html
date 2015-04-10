@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>sea</title>
+    <link href="http://fonts.googleapis.com/css?family=Alegreya+Sans:100,300,400,500,700,800,900,100italic,300italic,400italic,500italic,700italic,800italic,900italic|Open+Sans:300italic,400italic,600italic,700italic,800italic,700,300,600,800,400|Inconsolata:400,700" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/typicons.css" />
+  </head>
+  <body>
+    <div id="sidebar">
+      <div id="sidebar-menu">
+        <div class="projects-dropdown">
+          <span class="selected"><span class="typcn typcn-th-menu"></span> All projects</span>
+          <ul class="projects-dropdown-options">
+            <li><a href="#">All projects</a></li>
+            <li><a href="#">linux</a></li>
+            <li><a href="#">libgit2</a></li>
+            <li><a href="#">project with a name too large to display in one line</a></li>
+            <li><a href="#">golang</a></li>
+            <li><a href="#">httprouter</a></li>
+            <li class="separator"></li>
+            <li><a href="#"><span class="typcn typcn-spanner"></span>Manage repositories</a></li>
+          </ul>
+        </div>
+      </div>
+      <div id="sidebar-content">
+      </div>
+      <div id="sidebar-account">
+        <img class="user-avatar" src="http://placehold.it/26x26" />
+        <div class="user-name">germanogmn1</div>
+        <a href="#" class="user-logout">
+          <span class="typcn typcn-power"></span>
+        </a>
+      </div>
+    </div>
+    <div id="main">
+      <header id="main-header">
+        <h1 class="project-name">
+          <span class="icon-success typcn typcn-tick"></span>
+          <span class="icon-failure typcn typcn-times"></span>
+          <span class="icon-running typcn typcn-refresh"></span>
+          git2go
+          <small>#23</small>
+        </h1>
+      </header>
+      <section id="main-content">
+        <p>Lorem ipsum dolor sit amet, quo novum dicit ut, id blandit inimicus expetendis has. Eam dolore partiendo te, ut movet molestiae sed, in aliquid mentitum epicurei sed. Ipsum dolore evertitur ad qui, hinc brute atqui pri ea, vim sensibus euripidis elaboraret ut. Ex pri duis erant noluisse.</p>
+        <p>Cum eu natum etiam. Ut sea stet primis. Sed dicit zril sensibus ex. Vel at legimus mnesarchum, ut commodo perpetua sea, te vis congue libris timeam. Ei alterum eligendi scripserit duo. Nisl iisque at sea.</p>
+        <p>Ad omnis liber perfecto nec, per no liber eleifend. Ne his unum postulant. Dolore virtute pertinax an pri, nam ne case omnis intellegebat. Ex audire lobortis gubergren pro, sed at graeco phaedrum theophrastus. Ad est verterem iracundia. Mutat nonumes ius ut, mei aeque nonumy timeam eu.</p>
+        <p>Mucius antiopam sea ei, eu prima tantas consulatu usu. Ubique menandri vulputate usu ea, an nostro expetenda eos. Quo ex wisi mazim, sed facer persecuti ad. Malis scripta reprehendunt eu vim, ne eros civibus torquatos cum, partem epicuri eu vis. Modus semper contentiones per ad, eum ut quas simul voluptatum.</p>
+        <p>Simul meliore adolescens vis ne, vis at meis philosophia. Probatus mnesarchum cu eos, usu minim alterum graecis cu. Quodsi tractatos molestiae ea ius, ei mea ipsum appareat. In sea dico eleifend, sed feugiat legimus deterruisset an. In sed rebum necessitatibus, te est facilisi imperdiet neglegentur.</p>
+        <p>Accumsan theophrastus ne mea. Nulla corpora at per, mei in volumus periculis ocurreret, cum inermis definiebas in. Aliquam debitis nonumes an cum, ornatus inermis periculis mea ne. Impedit docendi suscipiantur mei no, sit ex vocibus perpetua definiebas. Usu te soleat viderer, te eam hendrerit adversarium. Eam laudem gloriatur et, in odio nisl deserunt eos.</p>
+        <p>His ignota adipiscing te, eos in magna antiopam. Vis et dolor aliquando. Numquam sapientem adversarium ut per, quo graeci diceret suavitate et. Nusquam senserit principes in quo.</p>
+        <p>Ex est dolore eloquentiam, cu partem molestiae sed. Ad sed adhuc utroque consulatu, ea dissentiet ullamcorper eum. Vim decore aliquando no, dico volutpat vis te. Ei sea falli cotidieque, vitae mentitum in sed. Sit et inani mucius. In sea saperet offendit, viderer voluptua nec ex.</p>
+        <p>Cu pri labore inermis, purto recteque no sit. Scripta invidunt definitiones sea ut, his albucius voluptatibus ei. Atqui admodum gloriatur ea vix. Cum eius rationibus te. Omittam eligendi partiendo ut sed, ex pri dolores legendos senserit.</p>
+        <p>Et his fabellas erroribus, an inimicus reformidans quo. Ut eos falli aliquam commune, mea no vero ridens, te est vero adolescens. Pri pertinax constituam dissentiet at, per amet illud definitionem id. Soleat melius patrioque est an. In elitr nostrum definiebas his, te aperiam minimum nec. Sit te phaedrum rationibus interesset.</p>
+      </div>
+    </section>
+    <script>
+      (function () {
+        'use strict';
+        var dropdowns = document.querySelectorAll('.projects-dropdown');
+
+        for (var i = 0; i < dropdowns.length; i++) {
+          var dropdown = dropdowns[i];
+          var toggle = dropdown.querySelector('.selected');
+
+          toggle.addEventListener('click', function (event) {
+            if (!dropdown.classList.contains('open')) {
+              event.stopPropagation();
+              dropdown.classList.add('open');
+            }
+          });
+        }
+
+        document.addEventListener('click', function (e) {
+          for (var i = 0; i < dropdowns.length; i++) {
+            dropdowns[i].classList.remove('open');
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
