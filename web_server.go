@@ -24,6 +24,9 @@ func WebServer() <-chan error {
 		router.GET("/build/:rev", showHandler)
 		router.POST("/build/:rev/cancel", cancelHandler)
 		router.GET("/build/:rev/stream", streamHandler)
+
+		router.GET("/repositories/new", newRepositoriesHandler)
+
 		log.Printf("Starting web server on %v", Config.WebAddr)
 
 		errors <- http.ListenAndServe(Config.WebAddr, &HTTPWrapper{router})
@@ -109,4 +112,8 @@ func updatesHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 			time.Sleep(1 * time.Second)
 		}
 	}
+}
+
+func newRepositoriesHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	RenderHtml(w, "new_repository", data)
 }

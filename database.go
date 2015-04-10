@@ -2,11 +2,25 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/gob"
 	"errors"
 	"sync"
 
 	"github.com/boltdb/bolt"
+)
+
+var (
+	DB *bolt.DB
+
+	RunningBuilds RunningList
+
+	// Buckets
+	dbIds          = []byte("ids")
+	dbRepositories = []byte("repositories")
+	dbBuilds       = []byte("builds")
+
+	dbBuckets = [...][]byte{dbIds, dbRepositories, dbBuilds}
 )
 
 type RunningList struct {
@@ -45,9 +59,6 @@ func (l *RunningList) CancelAll() {
 	l.RUnlock()
 }
 
-var RunningBuilds RunningList
-var DB *bolt.DB
-
 func InitDB() error {
 	RunningBuilds = RunningList{sync.RWMutex{}, make(map[string]RunningBuild)}
 
@@ -56,10 +67,82 @@ func InitDB() error {
 	if err != nil {
 		return err
 	}
+
 	return DB.Update(func(tx *bolt.Tx) error {
-		_, e := tx.CreateBucketIfNotExists([]byte("builds"))
-		return e
+		for _, bucket := range dbBuckets {
+			if _, e := tx.CreateBucketIfNotExists(bucket); e != nil {
+				return e
+			}
+		}
+		return nil
 	})
+}
+
+func incrementId(tx *bolt.Tx, bucketName []byte) (id int, idBytes [4]byte, err error) {
+	idsBucket := tx.Bucket(dbIds)
+	value := idsBucket.Get(bucketName)
+	if value != nil {
+		id = int(binary.LittleEndian.Uint32(value))
+	}
+	id++
+	binary.LittleEndian.PutUint32(idBytes[:], uint32(id))
+	err = idsBucket.Put(bucketName, idBytes[:])
+	return
+}
+
+func AllRepositories() []*Repository {
+	var buffer bytes.Buffer
+	var dec *gob.Decoder
+	var repo *Repository
+	var repos []*Repository
+
+	err := DB.View(func(tx *bolt.Tx) error {
+		cursor := tx.Bucket([]byte("repositories")).Cursor()
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			dec = gob.NewDecoder(&buffer)
+			repo = new(Repository)
+			_, e := buffer.Write(v)
+			if e != nil {
+				return e
+			}
+			e = dec.Decode(&repo)
+			if e != nil {
+				return e
+			}
+			repos = append(repos, repo)
+			buffer.Reset()
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return repos
+}
+
+// Will generate a new Id if repo.Id == 0
+func SaveRepository(repo *Repository) {
+	err := DB.Update(func(tx *bolt.Tx) (e error) {
+		var key [4]byte
+		if repo.Id == 0 {
+			repo.Id, key, e = incrementId(tx, dbRepositories)
+			if e != nil {
+				return e
+			}
+		} else {
+			binary.LittleEndian.PutUint32(key[:], uint32(repo.Id))
+		}
+		var buffer bytes.Buffer
+		enc := gob.NewEncoder(&buffer)
+		if enc.Encode(repo); e != nil {
+			return e
+		}
+		return tx.Bucket(dbRepositories).Put(key[:], buffer.Bytes())
+	})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func AllBuilds() []*Build {

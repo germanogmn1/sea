@@ -1,16 +1,10 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
-	"sync"
 	"syscall"
 	"time"
-
-	git "github.com/libgit2/git2go"
 )
 
 type BuildState uint
@@ -35,13 +29,14 @@ func (s BuildState) String() string {
 }
 
 type Build struct {
-	Rev        string
-	State      BuildState
-	Path       string
-	Output     []byte
-	ReturnCode int
-	StartedAt  time.Time
-	FinishedAt time.Time
+	RepositoryId int
+	Rev          string
+	State        BuildState
+	Path         string
+	Output       []byte
+	ReturnCode   int
+	StartedAt    time.Time
+	FinishedAt   time.Time
 }
 
 func (b *Build) Duration() time.Duration {
@@ -105,49 +100,4 @@ func (b *RunningBuild) Exec() error {
 
 func (b *RunningBuild) Cancel() {
 	close(b.cancel)
-}
-
-func StartLocalBuild(hook GitHook, wg *sync.WaitGroup) {
-	defer wg.Done()
-	check := func(err error) {
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	prefix := "sea_" + filepath.Base(hook.RepoPath)
-	directory, err := ioutil.TempDir("tmp", prefix)
-	defer os.RemoveAll(directory)
-	check(err)
-	log.Printf("Temp build dir: %s", directory)
-
-	repo, err := git.OpenRepository(hook.RepoPath)
-	check(err)
-	oid, err := git.NewOid(hook.NewRev)
-	check(err)
-	commit, err := repo.LookupCommit(oid)
-	check(err)
-	tree, err := commit.Tree()
-	check(err)
-	err = repo.CheckoutTree(tree, &git.CheckoutOpts{
-		Strategy:        git.CheckoutForce,
-		TargetDirectory: directory,
-	})
-	check(err)
-
-	// TODO: how to notify users of errors that ocurred before the build started
-	// to execute?
-	build := NewRunningBuild(&Build{
-		Rev:       hook.NewRev,
-		State:     BuildRunning,
-		Path:      directory,
-		StartedAt: time.Now(),
-	})
-	RunningBuilds.Add(build)
-	SaveBuild(build.Build)
-	defer RunningBuilds.Remove(build.Rev)
-	defer SaveBuild(build.Build)
-	defer func() { build.FinishedAt = time.Now() }()
-	err = build.Exec()
-	check(err)
 }

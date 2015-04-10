@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 )
@@ -23,10 +24,22 @@ func Run() int {
 	flag.StringVar(&Config.ReposPath, "repos", "./tmp/repos", "directory to store registered repositories")
 	flag.Parse()
 
+	var err error
+	for _, dir := range [...]string{
+		Config.ReposPath,
+		filepath.Base(Config.PipePath),
+		filepath.Base(Config.DBPath),
+	} {
+		if err = os.MkdirAll(dir, 0); err != nil {
+			log.Print(err)
+			return 1
+		}
+	}
+
 	killed := make(chan os.Signal, 1)
 	signal.Notify(killed, syscall.SIGINT, syscall.SIGTERM)
 
-	if err := InitDB(); err != nil {
+	if err = InitDB(); err != nil {
 		log.Print(err)
 		return 1
 	}
@@ -44,7 +57,10 @@ func Run() int {
 		select {
 		case hook := <-hooks:
 			wg.Add(1)
-			go StartLocalBuild(hook, &wg)
+			go func() {
+				StartLocalBuild(hook)
+				wg.Done()
+			}()
 		case err := <-webErrors:
 			log.Print(err)
 			return 1
