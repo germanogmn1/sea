@@ -1,11 +1,6 @@
 package main
 
-import (
-	"os/exec"
-	"path/filepath"
-	"syscall"
-	"time"
-)
+import "time"
 
 type BuildState uint
 
@@ -55,47 +50,6 @@ func NewRunningBuild(b *Build) RunningBuild {
 		Buffer: NewOutputBuffer(),
 		cancel: make(chan struct{}, 1),
 	}
-}
-
-func (b *RunningBuild) Exec() error {
-	script := filepath.Join(b.Path, "Seafile")
-
-	cmd := exec.Command(script)
-	cmd.Stdout = b.Buffer
-	cmd.Stderr = b.Buffer
-	defer func() {
-		b.Buffer.End()
-		b.Output = b.Buffer.Bytes()
-	}()
-
-	err := cmd.Start()
-	if err != nil {
-		return err
-	}
-
-	waitResult := make(chan error)
-	go func() { waitResult <- cmd.Wait() }()
-
-	select {
-	case err = <-waitResult:
-		if err == nil {
-			b.State = BuildSuccess
-		} else if exit, ok := err.(*exec.ExitError); ok {
-			b.State = BuildFailed
-			ws := exit.ProcessState.Sys().(syscall.WaitStatus) // will panic if not Unix
-			b.ReturnCode = ws.ExitStatus()
-		} else {
-			panic(err)
-		}
-	case <-b.cancel:
-		err = syscall.Kill(cmd.Process.Pid, syscall.SIGKILL)
-		if err != nil && err != syscall.ESRCH { // Already finished
-			return err
-		}
-		b.State = BuildCanceled
-	}
-
-	return nil
 }
 
 func (b *RunningBuild) Cancel() {

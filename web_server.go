@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -26,6 +27,7 @@ func WebServer() <-chan error {
 		router.GET("/build/:rev/stream", streamHandler)
 
 		router.GET("/repositories/new", newRepositoriesHandler)
+		router.POST("/repositories", createRepositoriesHandler)
 
 		log.Printf("Starting web server on %v", Config.WebAddr)
 
@@ -115,5 +117,30 @@ func updatesHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 }
 
 func newRepositoriesHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	RenderHtml(w, "new_repository", data)
+	RenderHtml(w, "new_repository", nil)
+}
+
+func createRepositoriesHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	remote := false
+	if len(r.FormValue("remote")) > 0 {
+		remote = true
+	}
+
+	repo := &Repository{
+		Name:   strings.TrimSpace(r.FormValue("name")),
+		Remote: remote,
+		Url:    strings.TrimSpace(r.FormValue("url")),
+	}
+
+	log.Printf("repo: %#v", repo)
+	valid := (len(repo.Name) > 0) && (!repo.Remote || len(repo.Url) > 0)
+	if valid {
+		err := StartRepository(repo)
+		if err != nil {
+			panic(err)
+		}
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	} else {
+		RenderHtml(w, "new_repository", repo)
+	}
 }

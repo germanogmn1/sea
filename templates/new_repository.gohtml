@@ -1,1 +1,35 @@
 <h1>New Repository</h1>
+
+<form action="/repositories" method="POST">
+  <div class="field">
+    <label for="repository_name">Name</label>
+    <input type="text" id="repository_name" name="name" />
+  </div>
+
+  <label class="checkbox">
+    <input type="checkbox" name="remote" id="repository_remote" />
+    Remote (bitbucket or github integration)
+  </label>
+
+  <div class="field url-field">
+    <label for="repository_url">Clone Url</label>
+    <input type="text" id="repository_url" name="url" />
+  </div>
+
+  <div class="field">
+    <button type="submit">Create Repository</button>
+  </div>
+</form>
+
+<script>
+(function () {
+  var remoteCheckbox = document.querySelector('#repository_remote')
+  var urlField = document.querySelector('.url-field');
+  var toggleCloneUrl = function () {
+    urlField.style.display = remoteCheckbox.checked ? 'block' : 'none';
+  };
+
+  remoteCheckbox.addEventListener('change', toggleCloneUrl);
+  toggleCloneUrl();
+}());
+</script>

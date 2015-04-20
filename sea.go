@@ -55,10 +55,10 @@ func Run() int {
 
 	for {
 		select {
-		case hook := <-hooks:
+		case _ = <-hooks:
 			wg.Add(1)
 			go func() {
-				StartLocalBuild(hook)
+				// StartLocalBuild(hook)
 				wg.Done()
 			}()
 		case err := <-webErrors:

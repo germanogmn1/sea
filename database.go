@@ -97,7 +97,7 @@ func AllRepositories() []*Repository {
 	var repos []*Repository
 
 	err := DB.View(func(tx *bolt.Tx) error {
-		cursor := tx.Bucket([]byte("repositories")).Cursor()
+		cursor := tx.Bucket(dbRepositories).Cursor()
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			dec = gob.NewDecoder(&buffer)
 			repo = new(Repository)
@@ -145,6 +145,27 @@ func SaveRepository(repo *Repository) {
 	}
 }
 
+func FindRepository(id int) *Repository {
+	var key [4]byte
+	binary.LittleEndian.PutUint32(key[:], uint32(id))
+
+	var repo *Repository
+	err := DB.View(func(tx *bolt.Tx) error {
+		value := tx.Bucket(dbRepositories).Get(key[:])
+		if value == nil {
+			return nil
+		}
+		repo = new(Repository)
+		reader := bytes.NewReader(value)
+		return gob.NewDecoder(reader).Decode(repo)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return repo
+}
+
 func AllBuilds() []*Build {
 	var buffer bytes.Buffer
 	var dec *gob.Decoder
@@ -152,7 +173,7 @@ func AllBuilds() []*Build {
 	var builds []*Build
 
 	err := DB.View(func(tx *bolt.Tx) error {
-		cursor := tx.Bucket([]byte("builds")).Cursor()
+		cursor := tx.Bucket(dbBuilds).Cursor()
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			dec = gob.NewDecoder(&buffer)
 			build = new(Build)
@@ -187,7 +208,7 @@ func SaveBuild(build *Build) {
 	}
 
 	err = DB.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte("builds"))
+		bucket := tx.Bucket(dbBuilds)
 		return bucket.Put([]byte(build.Rev), buffer.Bytes())
 	})
 
@@ -200,7 +221,7 @@ func FindBuild(revPrefix string) *Build {
 	var build *Build
 
 	err := DB.View(func(tx *bolt.Tx) error {
-		cursor := tx.Bucket([]byte("builds")).Cursor()
+		cursor := tx.Bucket(dbBuilds).Cursor()
 
 		prefix := []byte(revPrefix)
 		key, value := cursor.Seek(prefix)

@@ -5,7 +5,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/libgit2/git2go"
@@ -22,26 +25,20 @@ func (r *Repository) LocalPath() string {
 	return path.Join(Config.ReposPath, fmt.Sprintf("%d.git", r.Id))
 }
 
-func CreateLocalRepository() *Repository {
-	r := new(Repository)
-	r.Remote = false
+func StartRepository(r *Repository) (err error) {
 	SaveRepository(r)
-	git.InitRepository(r.LocalPath(), true)
-	return r
-}
-
-func CreateRemoteRepository() *Repository {
-	r := new(Repository)
-	r.Remote = true
-	SaveRepository(r)
-	git.Clone(r.Url, r.LocalPath(), &git.CloneOptions{
-		Bare: true,
-		RemoteCallbacks: &git.RemoteCallbacks{
-			CertificateCheckCallback: gitCertificateCheckCallback,
-			CredentialsCallback:      gitCredentialsCallback,
-		},
-	})
-	return r
+	if r.Remote {
+		_, err = git.Clone(r.Url, r.LocalPath(), &git.CloneOptions{
+			Bare: true,
+			RemoteCallbacks: &git.RemoteCallbacks{
+				CertificateCheckCallback: gitCertificateCheckCallback,
+				CredentialsCallback:      gitCredentialsCallback,
+			},
+		})
+	} else {
+		_, err = git.InitRepository(r.LocalPath(), true)
+	}
+	return
 }
 
 func (r *Repository) StartBuild(rev string) error {
@@ -63,7 +60,10 @@ func (r *Repository) StartBuild(rev string) error {
 		if err != nil {
 			return err
 		}
-		remote.Fetch("", nil, nil)
+		err = remote.Fetch(nil, nil, "")
+		if err != nil {
+			return err
+		}
 	}
 
 	oid, err := git.NewOid(rev)
@@ -98,7 +98,45 @@ func (r *Repository) StartBuild(rev string) error {
 	defer SaveBuild(build.Build)
 	defer func() { build.FinishedAt = time.Now() }()
 
-	return build.Exec()
+	script := filepath.Join(build.Path, "Seafile")
+
+	cmd := exec.Command(script)
+	cmd.Stdout = build.Buffer
+	cmd.Stderr = build.Buffer
+	defer func() {
+		build.Buffer.End()
+		build.Output = build.Buffer.Bytes()
+	}()
+
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+
+	waitResult := make(chan error)
+	go func() { waitResult <- cmd.Wait() }()
+
+	select {
+	case err = <-waitResult:
+		if err == nil {
+			build.State = BuildSuccess
+		} else if exit, ok := err.(*exec.ExitError); ok {
+			build.State = BuildFailed
+			ws := exit.ProcessState.Sys().(syscall.WaitStatus) // will panic if not Unix
+			build.ReturnCode = ws.ExitStatus()
+		} else {
+			panic(err)
+		}
+	case <-build.cancel:
+		err = syscall.Kill(cmd.Process.Pid, syscall.SIGKILL)
+		// ESRCH: process already finished
+		if err != nil && err != syscall.ESRCH {
+			return err
+		}
+		build.State = BuildCanceled
+	}
+
+	return nil
 }
 
 func gitCertificateCheckCallback(cert *git.Certificate, valid bool, hostname string) git.ErrorCode {
