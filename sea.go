@@ -27,10 +27,10 @@ func Run() int {
 	var err error
 	for _, dir := range [...]string{
 		Config.ReposPath,
-		filepath.Base(Config.PipePath),
-		filepath.Base(Config.DBPath),
+		filepath.Dir(Config.PipePath),
+		filepath.Dir(Config.DBPath),
 	} {
-		if err = os.MkdirAll(dir, 0); err != nil {
+		if err = os.MkdirAll(dir, 0775); err != nil {
 			log.Print(err)
 			return 1
 		}
