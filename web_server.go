@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +30,8 @@ func WebServer() <-chan error {
 
 		router.GET("/repositories/new", newRepositoriesHandler)
 		router.POST("/repositories", createRepositoriesHandler)
+		router.POST("/repositories/:id/hooks/bitbucket", bitbucketHookRepositoriesHandler)
+		router.POST("/repositories/:id/hooks/github", githubHookRepositoriesHandler)
 
 		log.Printf("Starting web server on %v", Config.WebAddr)
 
@@ -144,3 +148,33 @@ func createRepositoriesHandler(w http.ResponseWriter, r *http.Request, _ httprou
 		RenderHtml(w, "new_repository", repo)
 	}
 }
+
+func bitbucketHookRepositoriesHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	id, err := strconv.Atoi(ps.ByName("id"))
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Invalid `id` parameter", http.StatusBadRequest)
+		return
+	}
+	repository := FindRepository(id)
+	if repository == nil {
+		http.NotFound(w, r)
+		return
+	}
+	rawJson := r.FormValue("payload")
+	var data interface{}
+	json.Unmarshal([]byte(rawJson), &data)
+	root := data.(map[string]interface{})
+	commitList := root["commits"].([]interface{})
+	lastCommit := commitList[len(commitList)-1].(map[string]interface{})
+	commitRev := lastCommit["raw_node"].(string)
+
+	go func() {
+		err := repository.StartBuild(commitRev)
+		if err != nil {
+			log.Print("Repository.StartBuild: ", err)
+		}
+	}()
+}
+
+func githubHookRepositoriesHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {}

@@ -59,7 +59,13 @@ func RenderHtml(w http.ResponseWriter, keyName string, data interface{}) {
 		panic("Template " + keyName + " not found")
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := renderTmpl.ExecuteTemplate(w, "root", data); err != nil {
+
+	templateData := struct {
+		Repositories []*Repository
+		Data         interface{}
+	}{AllRepositories(), data}
+
+	if err := renderTmpl.ExecuteTemplate(w, "root", templateData); err != nil {
 		panic(err)
 	}
 }

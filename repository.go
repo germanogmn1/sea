@@ -60,6 +60,10 @@ func (r *Repository) StartBuild(rev string) error {
 		if err != nil {
 			return err
 		}
+		remote.SetCallbacks(&git.RemoteCallbacks{
+			CertificateCheckCallback: gitCertificateCheckCallback,
+			CredentialsCallback:      gitCredentialsCallback,
+		})
 		err = remote.Fetch(nil, nil, "")
 		if err != nil {
 			return err
@@ -78,10 +82,15 @@ func (r *Repository) StartBuild(rev string) error {
 	if err != nil {
 		return err
 	}
-	return repo.CheckoutTree(tree, &git.CheckoutOpts{
+
+	err = repo.CheckoutTree(tree, &git.CheckoutOpts{
 		Strategy:        git.CheckoutForce,
 		TargetDirectory: directory,
 	})
+
+	if err != nil {
+		return err
+	}
 
 	// TODO: how to notify users of errors that ocurred before the build started
 	// to execute?

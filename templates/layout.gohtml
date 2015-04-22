@@ -30,6 +30,13 @@
     </style>
   </head>
   <body>
-    {{template "body" $}}
+    <header>
+      <ul>
+        {{range .Repositories}}
+        <li><a href="#{{.Id}}">{{.Name}}{{if .Remote}} <small>{{.Url}}{{end}}</small></a></li>
+        {{end}}
+      </ul>
+    </header>
+    {{template "body" .Data}}
   </body>
 </html>
