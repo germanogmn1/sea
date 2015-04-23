@@ -1,6 +1,11 @@
 package main
 
-import "time"
+import (
+	"bytes"
+	"crypto/md5"
+	"fmt"
+	"time"
+)
 
 type BuildState uint
 
@@ -23,9 +28,26 @@ func (s BuildState) String() string {
 	return stateNames[s]
 }
 
+type CommitInfo struct {
+	Revision string
+	Message  string
+	Branch   string
+
+	AuthorName  string
+	AuthorEmail string
+}
+
+func GravatarUrl(email []byte, size int) string {
+	data := bytes.TrimSpace(bytes.ToLower(email))
+	sum := md5.New().Sum(data)
+	url := fmt.Sprintf("https://secure.gravatar.com/avatar/%x?size=%d&default=mm", sum, size)
+	return url
+}
+
 type Build struct {
-	RepositoryId int
-	Rev          string
+	ID           int
+	RepositoryID int
+	Commit       CommitInfo
 	State        BuildState
 	Path         string
 	Output       []byte

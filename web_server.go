@@ -22,6 +22,9 @@ func WebServer() <-chan error {
 			return
 		}
 		router := httprouter.New()
+
+		router.ServeFiles("/public/*filepath", http.Dir("public/"))
+
 		router.GET("/", indexHandler)
 		router.GET("/updates", updatesHandler)
 		router.GET("/build/:rev", showHandler)

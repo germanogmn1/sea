@@ -1,0 +1,140 @@
+/* colors: http://paletton.com/#uid=13n0u0kmC-GcDPAiaHqrovuuJpD */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Alegreya Sans', Helvetica, Arial, sans-serif;
+  color: #444;
+  line-height: 1.45;
+}
+
+html, body { height: 100%; }
+
+pre {
+  font-family: Inconsolata, monospace;
+}
+
+#main-header {
+  height: 50px;
+  background-color: #3696AC;
+  padding: 0 12px;
+}
+
+.header-logo {
+  float: left;
+  margin: 0 12px 0 0;
+  padding: 0;
+  height: 50px;
+  line-height: 45px;
+  font-size: 2em;
+}
+
+.header-logo a {
+  text-decoration: none;
+  color: #fff;
+}
+
+.header-nav {
+  float: left;
+}
+
+.header-nav a {
+  display: inline-block;
+  line-height: 50px;
+  padding: 0 12px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.project-select {
+  font-weight: bold;
+}
+
+.header-nav a:hover {
+  color: #eee;
+  background-color: rgba(255, 255, 255, 0.2)
+}
+
+[data-dropdown] {
+  position: relative;
+}
+[data-dropdown-options] {
+  position: absolute;
+  z-index: 10;
+}
+ul.dropdown {
+  width: 250px;
+  padding: 3px 0;
+  margin: 0;
+  background: #fff;
+  border: 1px solid #aaa;
+  box-shadow: 3px 3px 0px 0px #aaa;
+}
+ul.dropdown li {
+  list-style-type: none;
+}
+ul.dropdown a {
+  display: block;
+  line-height: 1.45;
+  padding: 6px 12px;
+  color: #444;
+}
+ul.dropdown a:hover {
+  background: #444;
+  color: #fff;
+  font-weight: bold;
+}
+
+#page {
+  position: relative;
+}
+
+#sidebar {
+  position: absolute;
+  width: 200px;
+  height: calc(100vh - 50px);
+  padding: 6px 12px;
+  background-color: #eee;
+  border-right: 1px solid #ddd;
+}
+
+#content {
+  border-top: 1px solid transparent;
+  margin-left: 200px;
+  padding-left: 12px;
+}
+
+/*
+body {
+  width: 940px;
+  margin: 50px auto;
+}
+
+.build-rev {
+  font-family: monospace;
+}
+
+#build-result {
+  color: #fff;
+  background-color: #000;
+  border: 2px solid #666;
+  padding: 10px;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field label {
+  display: block;
+}
+
+label.checkbox {
+  display: block;
+  margin-bottom: 12px;
+}
+
+[type="checkbox"] { margin: 0; }
+*/

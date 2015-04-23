@@ -2,41 +2,37 @@
 <html>
   <head>
     <title>Sea</title>
-    <style>
-      body {
-        width: 940px;
-        margin: 50px auto;
-      }
-      .build-rev {
-        font-family: monospace;
-      }
-      #build-result {
-        color: #fff;
-        background-color: #000;
-        border: 2px solid #666;
-        padding: 10px;
-      }
-      .field {
-        margin-bottom: 12px;
-      }
-      .field label {
-        display: block;
-      }
-      label.checkbox {
-        display: block;
-        margin-bottom: 12px;
-      }
-      [type="checkbox"] { margin: 0; }
-    </style>
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Alegreya+Sans:100,300,400,500,700,800,900,100italic,300italic,400italic,500italic,700italic,800italic,900italic|Open+Sans:300italic,400italic,600italic,700italic,800italic,700,300,600,800,400|Inconsolata:400,700" />
+    <link rel="stylesheet" href="/public/css/ionicons.css" />
+    <link rel="stylesheet" href="/public/css/style.css" />
   </head>
   <body>
-    <header>
-      <ul>
-        {{range .Repositories}}
-        <li><a href="#{{.Id}}">{{.Name}}{{if .Remote}} <small>{{.Url}}{{end}}</small></a></li>
-        {{end}}
-      </ul>
+    <header id="main-header">
+      <h1 class="header-logo"><a href="/">sea</a></h1>
+      <nav class="header-nav">
+        <div data-dropdown>
+          <a href="#" class="project-select" data-dropdown-toggle>
+            All repositories <span class="ion-android-arrow-dropdown"></span>
+          </a>
+          <ul class="dropdown" hidden data-dropdown-options>
+            <li><a href="#">repository with a name too large to display in one line</a></li>
+            {{range .Repositories}}
+            <li><a href="#{{.Id}}">{{.Name}}</a></li>
+            {{end}}
+          </ul>
+        </div>
+      </nav>
     </header>
-    {{template "body" .Data}}
+
+    <div id="page">
+      <div id="sidebar">
+        
+      </div>
+      <div id="content">
+        {{template "body" .Data}}
+      </div>
+    </div>
+
+    <script src="public/js/main.js"></script>
   </body>
 </html>

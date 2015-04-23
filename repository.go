@@ -15,14 +15,14 @@ import (
 )
 
 type Repository struct {
-	Id     int
+	ID     int
 	Name   string
 	Remote bool
 	Url    string
 }
 
 func (r *Repository) LocalPath() string {
-	return path.Join(Config.ReposPath, fmt.Sprintf("%d.git", r.Id))
+	return path.Join(Config.ReposPath, fmt.Sprintf("%d.git", r.ID))
 }
 
 func StartRepository(r *Repository) (err error) {
@@ -42,7 +42,7 @@ func StartRepository(r *Repository) (err error) {
 }
 
 func (r *Repository) StartBuild(rev string) error {
-	prefix := fmt.Sprintf("sea_%d_", r.Id)
+	prefix := fmt.Sprintf("sea_%d_", r.ID)
 	directory, err := ioutil.TempDir("tmp", prefix)
 	if err != nil {
 		return err
@@ -95,7 +95,7 @@ func (r *Repository) StartBuild(rev string) error {
 	// TODO: how to notify users of errors that ocurred before the build started
 	// to execute?
 	build := NewRunningBuild(&Build{
-		RepositoryId: r.Id,
+		RepositoryId: r.ID,
 		Rev:          rev,
 		State:        BuildRunning,
 		Path:         directory,
