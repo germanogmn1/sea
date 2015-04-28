@@ -44,11 +44,18 @@ func WebServer() <-chan error {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	RenderHtml(w, "index", AllBuilds())
+	builds, err := AllBuilds()
+	if err != nil {
+		panic(err)
+	}
+	RenderHtml(w, "index", builds)
 }
 
 func showHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	build := FindBuild(ps.ByName("rev"))
+	build, err := FindBuild(ps.ByName("rev"))
+	if err != nil {
+		panic(err)
+	}
 	if build == nil {
 		http.NotFound(w, r)
 		return
@@ -57,7 +64,10 @@ func showHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func streamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	build := FindBuild(ps.ByName("rev"))
+	build, err := FindBuild(ps.ByName("rev"))
+	if err != nil {
+		panic(err)
+	}
 	if build == nil {
 		http.NotFound(w, r)
 		return
@@ -68,7 +78,7 @@ func streamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		return
 	}
 
-	running, ok := RunningBuilds.Get(build.Rev)
+	running, ok := RunningBuilds.Get(build)
 	if !ok {
 		panic("build state is BuildRunning but no running build was found")
 	}

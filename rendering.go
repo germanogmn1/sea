@@ -60,10 +60,15 @@ func RenderHtml(w http.ResponseWriter, keyName string, data interface{}) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
+	repos, err := AllRepositories()
+	if err != nil {
+		panic(err)
+	}
+
 	templateData := struct {
 		Repositories []*Repository
 		Data         interface{}
-	}{AllRepositories(), data}
+	}{repos, data}
 
 	if err := renderTmpl.ExecuteTemplate(w, "root", templateData); err != nil {
 		panic(err)

@@ -19,6 +19,8 @@ type Repository struct {
 	Name   string
 	Remote bool
 	Url    string
+
+	LastBuildID int
 }
 
 func (r *Repository) LocalPath() string {
@@ -41,7 +43,7 @@ func StartRepository(r *Repository) (err error) {
 	return
 }
 
-func (r *Repository) StartBuild(rev string) error {
+func (r *Repository) StartBuild(gitRevision string, gitBranch string) error {
 	prefix := fmt.Sprintf("sea_%d_", r.ID)
 	directory, err := ioutil.TempDir("tmp", prefix)
 	if err != nil {
@@ -70,7 +72,7 @@ func (r *Repository) StartBuild(rev string) error {
 		}
 	}
 
-	oid, err := git.NewOid(rev)
+	oid, err := git.NewOid(gitRevision)
 	if err != nil {
 		return err
 	}
@@ -92,18 +94,26 @@ func (r *Repository) StartBuild(rev string) error {
 		return err
 	}
 
+	commitAuthor := commit.Author()
+
 	// TODO: how to notify users of errors that ocurred before the build started
 	// to execute?
 	build := NewRunningBuild(&Build{
-		RepositoryId: r.ID,
-		Rev:          rev,
-		State:        BuildRunning,
-		Path:         directory,
-		StartedAt:    time.Now(),
+		RepositoryID: r.ID,
+		Commit: CommitInfo{
+			Revision:    gitRevision,
+			Message:     commit.Message(),
+			Branch:      gitBranch,
+			AuthorName:  commitAuthor.Name,
+			AuthorEmail: commitAuthor.Email,
+		},
+		State:     BuildRunning,
+		Path:      directory,
+		StartedAt: time.Now(),
 	})
 	RunningBuilds.Add(build)
 	SaveBuild(build.Build)
-	defer RunningBuilds.Remove(build.Rev)
+	defer RunningBuilds.Remove(build)
 	defer SaveBuild(build.Build)
 	defer func() { build.FinishedAt = time.Now() }()
 

@@ -56,6 +56,10 @@ type Build struct {
 	FinishedAt   time.Time
 }
 
+func (b *Build) Key() string {
+	return fmt.Sprintf("%d/%d", b.RepositoryID, b.ID)
+}
+
 func (b *Build) Duration() time.Duration {
 	return b.FinishedAt.Sub(b.StartedAt)
 }
